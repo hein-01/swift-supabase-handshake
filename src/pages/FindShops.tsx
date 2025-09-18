@@ -312,7 +312,7 @@ export default function FindShops() {
               <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
               <div>
                 <span className="font-medium text-foreground">Keyword:</span>
-                <span className="text-muted-foreground ml-2">e.g., "cake," "t-shirt," "coffee"</span>
+                <span className="text-muted-foreground ml-2">e.g., "cake," "sofas," "rice"</span>
               </div>
             </div>
             
@@ -320,7 +320,15 @@ export default function FindShops() {
               <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
               <div>
                 <span className="font-medium text-foreground">Category:</span>
-                <span className="text-muted-foreground ml-2">e.g., "Women's Fashion," "Furniture," "Men's Fashion"</span>
+                <span className="text-muted-foreground ml-2">Filters-&gt;Choose a Category: e.g., "Women's Fashion," "Furniture," "Men's Fashion"</span>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-background/50 border border-border/30">
+              <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+              <div>
+                <span className="font-medium text-foreground">Product:</span>
+                <span className="text-muted-foreground ml-2">Filters-&gt;Choose a Category-&gt;Choose a Product (e.g., Tablets, Transformers)</span>
               </div>
             </div>
             
