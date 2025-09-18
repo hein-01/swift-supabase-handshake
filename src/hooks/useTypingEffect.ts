@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 export const useTypingEffect = (text: string, speed: number = 100) => {
   const [displayedText, setDisplayedText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(true);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Memoize the text to prevent unnecessary re-renders
   const memoizedText = useMemo(() => text, [text]);
@@ -15,25 +16,43 @@ export const useTypingEffect = (text: string, speed: number = 100) => {
   }, []);
 
   useEffect(() => {
-    if (!isTyping) return;
+    // Clear any existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    if (!isTyping || !memoizedText) return;
 
     if (currentIndex < memoizedText.length) {
-      const timer = setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         setDisplayedText(prev => prev + memoizedText[currentIndex]);
         setCurrentIndex(prev => prev + 1);
       }, speed);
-
-      return () => clearTimeout(timer);
     } else {
       // Pause typing and reset after a delay
       setIsTyping(false);
-      const resetTimer = setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         resetTyping();
       }, 2000);
-
-      return () => clearTimeout(resetTimer);
     }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
   }, [currentIndex, memoizedText, speed, isTyping, resetTyping]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   return displayedText || 'Search';
 };
