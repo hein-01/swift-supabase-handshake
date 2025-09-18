@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ShoppingBag, Compass, ArrowRight } from "lucide-react";
 import searchIcon from "../assets/search-icon-new.png";
-import { useTypingEffect } from "@/hooks/useTypingEffect";
+
 import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import BusinessDirectory from "./BusinessDirectory";
@@ -28,7 +28,7 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("product");
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
-  const typingPlaceholder = useTypingEffect("Search by business name, etc", 20);
+  
   const navigate = useNavigate();
 
   const heroBackgrounds = [heroBg1, heroBg2, heroBg3];
@@ -124,7 +124,7 @@ const Index = () => {
             <div className="flex-1 relative">
               <Input
                 type="text"
-                placeholder={typingPlaceholder}
+                placeholder="Search by business name, etc"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
