@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { expandSearchTerms, normalizeCategoryName, synonymDictionary } from "@/utils/synonymDictionary";
+import { useTypingEffect } from "@/hooks/useTypingEffect";
 
 interface Business {
   id: string;
@@ -59,8 +60,14 @@ export default function FindShops() {
   useEffect(() => {
     setCurrentPage(0);
     setHasMore(true);
-    // Always fetch businesses - either with filters or show all
-    fetchBusinesses(true);
+    // Only fetch businesses if there's a search term or other filters applied
+    if (searchTerm || selectedCategory !== "all" || selectedProducts.length > 0 || locationFilter || deliveryFilter.length > 0) {
+      fetchBusinesses(true);
+    } else {
+      // Clear businesses when no filters are applied
+      setBusinesses([]);
+      setLoading(false);
+    }
   }, [searchTerm, selectedCategory, selectedProducts, locationFilter, deliveryFilter]);
 
   const fetchCategories = async () => {
@@ -226,7 +233,7 @@ export default function FindShops() {
           searchError = error;
         }
       } else {
-        // No search term, fetch all businesses with other filters
+        // No search term but other filters applied, fetch businesses with filters
         const { data, error } = await supabase.rpc('search_businesses', {
           search_terms: null,
           category_id: categoryId,
@@ -290,6 +297,46 @@ export default function FindShops() {
     </div>
   );
 
+  const EmptyStateGuidance = () => {
+    const guidanceText = useTypingEffect("Use the search bar to find local shops and services. You can search by:", 50);
+    
+    return (
+      <div className="text-center py-16 w-full max-w-2xl mx-auto">
+        <div className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-2xl p-8 border border-border/50 shadow-lg">
+          <h2 className="text-2xl font-semibold text-foreground mb-6 min-h-[2rem]">
+            {guidanceText}
+          </h2>
+          
+          <div className="space-y-4 text-left">
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-background/50 border border-border/30">
+              <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+              <div>
+                <span className="font-medium text-foreground">Keyword:</span>
+                <span className="text-muted-foreground ml-2">e.g., "cake," "t-shirt," "coffee"</span>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-background/50 border border-border/30">
+              <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+              <div>
+                <span className="font-medium text-foreground">Category:</span>
+                <span className="text-muted-foreground ml-2">e.g., "Women's Fashion," "Furniture," "Men's Fashion"</span>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-background/50 border border-border/30">
+              <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+              <div>
+                <span className="font-medium text-foreground">Shop Name:</span>
+                <span className="text-muted-foreground ml-2">e.g., "Toasty Bakery House," "TK Furniture"</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -352,7 +399,7 @@ export default function FindShops() {
               businesses.map((business) => (
                 <PopularBusinessCard key={business.id} business={business} />
               ))
-            ) : (
+            ) : searchTerm || selectedCategory !== "all" || selectedProducts.length > 0 || locationFilter || deliveryFilter.length > 0 ? (
               <div className="text-center py-12 w-full">
                 <p className="text-xl text-muted-foreground">
                   No businesses found matching your criteria.
@@ -361,6 +408,8 @@ export default function FindShops() {
                   Try adjusting your search filters or browse all categories.
                 </p>
               </div>
+            ) : (
+              <EmptyStateGuidance />
             )}
           </div>
           
