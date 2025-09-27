@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Bookmark, Check, BadgeCheck, MapPin, ChevronRight, ChevronLeft, Star } from 'lucide-react';
+import { Bookmark, Check, BadgeCheck, MapPin, ChevronRight, ChevronLeft, Star, Globe } from 'lucide-react';
 import facebookIcon from "@/assets/facebook-icon.jpg";
 import tiktokIcon from "@/assets/tiktok-icon.jpg";
 import phoneIcon from "@/assets/phone-icon-new.png";
@@ -29,6 +29,7 @@ interface Business {
   rating?: number;
   image_url?: string;
   website?: string;
+  info_website?: string;
   product_images?: string[] | null;
   business_options?: string[] | null;
   starting_price?: string | null;
@@ -641,13 +642,15 @@ export const PopularBusinessCard = ({ business }: PopularBusinessCardProps) => {
          </Dialog>
          
           <div className="flex items-center gap-2">
-            {business.facebook_page && (
-              <img 
-                src={facebookIcon}
-                alt="Facebook"
-                className="w-6 h-6 rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => window.open(business.facebook_page, '_blank')}
-              />
+            {business.info_website && (
+              <Button
+                size="sm"
+                className="h-7 px-2 bg-blue-600 hover:bg-blue-700 text-white border-0 flex items-center gap-1"
+                onClick={() => window.open(business.info_website, '_blank')}
+              >
+                <Globe className="w-4 h-4" />
+                <span className="text-xs">Website</span>
+              </Button>
             )}
             {business.tiktok_url && (
               <img 
@@ -655,6 +658,14 @@ export const PopularBusinessCard = ({ business }: PopularBusinessCardProps) => {
                 alt="TikTok"
                 className="w-6 h-6 rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => window.open(business.tiktok_url, '_blank')}
+              />
+            )}
+            {business.facebook_page && (
+              <img 
+                src={facebookIcon}
+                alt="Facebook"
+                className="w-6 h-6 rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => window.open(business.facebook_page, '_blank')}
               />
             )}
             {business.phone && (
