@@ -39,7 +39,8 @@ const BUSINESS_OPTIONS = [
   "Pickup In-Store", 
   "Free Wifi",
   "Next-Day Delivery",
-  "We Sell Online"
+  "We Sell Online",
+  "Online Payments"
 ];
 
 const BUSINESS_CATEGORIES = [
