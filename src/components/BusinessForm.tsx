@@ -25,6 +25,7 @@ interface BusinessFormData {
   province_district: string;
   zipCode: string;
   website: string;
+  informationWebsite: string;
   facebookPage: string;
   tiktokUrl: string;
   startingPrice: string;
@@ -100,6 +101,7 @@ export default function BusinessForm({ onSuccess, editingBusiness }: BusinessFor
     province_district: editingBusiness?.province_district || "",
     zipCode: editingBusiness?.zip_code || "",
     website: editingBusiness?.website || "",
+    informationWebsite: editingBusiness?.information_website || "",
     facebookPage: editingBusiness?.facebook_page || "",
     tiktokUrl: editingBusiness?.tiktok_url || "",
     startingPrice: editingBusiness?.starting_price || "",
@@ -447,6 +449,7 @@ export default function BusinessForm({ onSuccess, editingBusiness }: BusinessFor
         province_district: formData.province_district,
         zip_code: formData.zipCode,
         website: formData.website,
+        information_website: formData.informationWebsite || null,
         image_url: logoUrl || editingBusiness?.image_url || null,
         facebook_page: formData.facebookPage || null,
         tiktok_url: formData.tiktokUrl || null,
@@ -878,7 +881,7 @@ export default function BusinessForm({ onSuccess, editingBusiness }: BusinessFor
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Globe className="h-5 w-5 text-primary" />
-                  <Label htmlFor="website" className="text-sm font-medium text-foreground">Website</Label>
+                  <Label htmlFor="website" className="text-sm font-medium text-foreground">Online Shop Website</Label>
                 </div>
                 <Input
                   id="website"
@@ -904,18 +907,34 @@ export default function BusinessForm({ onSuccess, editingBusiness }: BusinessFor
               </div>
             </div>
             
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Music className="h-5 w-5 text-pink-600" />
-                <Label htmlFor="tiktokUrl" className="text-sm font-medium text-foreground">TikTok</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Music className="h-5 w-5 text-pink-600" />
+                  <Label htmlFor="tiktokUrl" className="text-sm font-medium text-foreground">TikTok</Label>
+                </div>
+                <Input
+                  id="tiktokUrl"
+                  value={formData.tiktokUrl}
+                  onChange={(e) => handleInputChange('tiktokUrl', e.target.value)}
+                  placeholder="https://tiktok.com/@yourusername"
+                  className="border-2 border-border/60 bg-card shadow-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all duration-200 hover:border-border/80"
+                />
               </div>
-              <Input
-                id="tiktokUrl"
-                value={formData.tiktokUrl}
-                onChange={(e) => handleInputChange('tiktokUrl', e.target.value)}
-                placeholder="https://tiktok.com/@yourusername"
-                className="border-2 border-border/60 bg-card shadow-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all duration-200 hover:border-border/80"
-              />
+              
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-primary" />
+                  <Label htmlFor="informationWebsite" className="text-sm font-medium text-foreground">Information Website</Label>
+                </div>
+                <Input
+                  id="informationWebsite"
+                  value={formData.informationWebsite}
+                  onChange={(e) => handleInputChange('informationWebsite', e.target.value)}
+                  placeholder="https://your-info-website.com"
+                  className="border-2 border-border/60 bg-card shadow-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all duration-200 hover:border-border/80"
+                />
+              </div>
             </div>
           </div>
 
