@@ -61,6 +61,7 @@ export const PopularServiceCard = ({ service }: PopularServiceCardProps) => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [showAuthInReviewModal, setShowAuthInReviewModal] = useState(false);
   const [slotCount, setSlotCount] = useState<number>(0);
+  const [scheduleHours, setScheduleHours] = useState<string>('');
   const { toast } = useToast();
 
   // Fetch existing reviews when modal opens
@@ -108,6 +109,54 @@ export const PopularServiceCard = ({ service }: PopularServiceCardProps) => {
 
     fetchSlotCount();
   }, [service.id, service.popular_products]);
+
+  // Fetch schedule hours
+  useEffect(() => {
+    const fetchScheduleHours = async () => {
+      try {
+        // First get business_resources for this service
+        const { data: resources, error: resourceError } = await supabase
+          .from('business_resources')
+          .select('id')
+          .eq('business_id', service.id)
+          .limit(1);
+
+        if (resourceError) throw resourceError;
+
+        if (resources && resources.length > 0) {
+          // Get the schedule for this resource
+          const { data: schedules, error: scheduleError } = await supabase
+            .from('business_schedules')
+            .select('open_time, close_time')
+            .eq('resource_id', resources[0].id)
+            .eq('is_open', true)
+            .limit(1)
+            .maybeSingle();
+
+          if (scheduleError) throw scheduleError;
+
+          if (schedules) {
+            // Format times (e.g., "06:00:00" to "6AM")
+            const formatTime = (timeStr: string) => {
+              const [hours, minutes] = timeStr.split(':');
+              const hour = parseInt(hours);
+              const ampm = hour >= 12 ? 'PM' : 'AM';
+              const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+              return `${displayHour}${ampm}`;
+            };
+
+            const openTime = formatTime(schedules.open_time);
+            const closeTime = formatTime(schedules.close_time);
+            setScheduleHours(`${openTime} - ${closeTime}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching schedule hours:', error);
+      }
+    };
+
+    fetchScheduleHours();
+  }, [service.id]);
 
   const checkBookmarkStatus = async () => {
     try {
@@ -649,6 +698,8 @@ export const PopularServiceCard = ({ service }: PopularServiceCardProps) => {
                      option === "We Sell Online" ? "WE SELL ONLINE" : 
                      option === "Pickup In-Store" && service.popular_products === "Futsal Booking" 
                        ? `${slotCount} ${slotCount === 1 ? 'Field' : 'Fields'}`
+                       : option === "Digital Payments" && scheduleHours
+                       ? scheduleHours
                        : option}
                   </span>
                   {index < service.business_options.length - 1 && (
