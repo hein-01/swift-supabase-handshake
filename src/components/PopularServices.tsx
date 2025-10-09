@@ -60,6 +60,8 @@ const PopularServices = () => {
         return;
       }
 
+      console.log('Fetched services:', servicesData);
+
       // For each service, fetch corresponding business data via business_resources
       const servicesWithBusinessData = await Promise.all(
         (servicesData || []).map(async (service) => {
@@ -70,6 +72,8 @@ const PopularServices = () => {
             .eq('service_id', service.id)
             .limit(1)
             .maybeSingle();
+
+          console.log('Resource data for service', service.id, ':', resourceData);
 
           let businessData = null;
           if (resourceData) {
@@ -82,6 +86,7 @@ const PopularServices = () => {
               .maybeSingle();
             
             businessData = data;
+            console.log('Business data for service', service.id, ':', businessData);
           }
 
           // Combine service and business data
@@ -112,6 +117,8 @@ const PopularServices = () => {
           };
         })
       );
+
+      console.log('Final services with business data:', servicesWithBusinessData);
       
       setServices(servicesWithBusinessData);
     } catch (error) {

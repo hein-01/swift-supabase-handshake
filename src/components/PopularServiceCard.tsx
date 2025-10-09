@@ -51,6 +51,7 @@ interface PopularServiceCardProps {
 }
 
 export const PopularServiceCard = ({ service }: PopularServiceCardProps) => {
+  console.log('PopularServiceCard service data:', service);
   const [openModal, setOpenModal] = useState(false);
   const [openReviewModal, setOpenReviewModal] = useState(false);
   const [reviewData, setReviewData] = useState({ rating: 5, comment: '' });
