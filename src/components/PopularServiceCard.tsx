@@ -27,6 +27,7 @@ interface Service {
   category?: string;
   towns?: string;
   province_district?: string;
+  address?: string;
   rating?: number;
   image_url?: string;
   website?: string;
@@ -673,11 +674,11 @@ export const PopularServiceCard = ({ service }: PopularServiceCardProps) => {
             </h3>
           </div>
           
-           {(service.towns || service.province_district) && (
+           {(service.address || service.towns || service.province_district) && (
              <p className="text-xs text-muted-foreground flex items-center gap-1 whitespace-nowrap overflow-hidden text-ellipsis">
                <MapPin className="w-3 h-3 text-gray-500 flex-shrink-0" />
                <span className="truncate">
-                 {[service.towns, service.province_district].filter(Boolean).join(', ')}
+                 {service.address || [service.towns, service.province_district].filter(Boolean).join(', ')}
                </span>
              </p>
            )}

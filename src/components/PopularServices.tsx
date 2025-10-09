@@ -16,6 +16,7 @@ interface Service {
   category?: string;
   towns?: string;
   province_district?: string;
+  address?: string;
   rating?: number;
   image_url?: string;
   website?: string;
@@ -59,15 +60,29 @@ const PopularServices = () => {
         return;
       }
 
-      // For each service, fetch corresponding business data
+      // For each service, fetch corresponding business data via business_resources
       const servicesWithBusinessData = await Promise.all(
         (servicesData || []).map(async (service) => {
-          const { data: businessData } = await supabase
-            .from('businesses')
-            .select('*')
-            .eq('category', service.category_id)
-            .eq('searchable_business', true)
+          // First, get the business_resource that links this service to a business
+          const { data: resourceData } = await supabase
+            .from('business_resources')
+            .select('business_id')
+            .eq('service_id', service.id)
+            .limit(1)
             .maybeSingle();
+
+          let businessData = null;
+          if (resourceData) {
+            // Then get the business data using the business_id
+            const { data } = await supabase
+              .from('businesses')
+              .select('*')
+              .eq('id', resourceData.business_id)
+              .eq('searchable_business', true)
+              .maybeSingle();
+            
+            businessData = data;
+          }
 
           // Combine service and business data
           return {
@@ -78,6 +93,7 @@ const PopularServices = () => {
             category: businessData?.category,
             towns: businessData?.towns,
             province_district: businessData?.province_district,
+            address: businessData?.address,
             rating: businessData?.rating,
             image_url: businessData?.image_url,
             website: businessData?.website,
