@@ -60,6 +60,7 @@ export const PopularServiceCard = ({ service }: PopularServiceCardProps) => {
   const [isBookmarkLoading, setIsBookmarkLoading] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [showAuthInReviewModal, setShowAuthInReviewModal] = useState(false);
+  const [slotCount, setSlotCount] = useState<number>(0);
   const { toast } = useToast();
 
   // Fetch existing reviews when modal opens
@@ -73,6 +74,40 @@ export const PopularServiceCard = ({ service }: PopularServiceCardProps) => {
   useEffect(() => {
     checkBookmarkStatus();
   }, [service.id]);
+
+  // Fetch slot count for futsal services
+  useEffect(() => {
+    const fetchSlotCount = async () => {
+      if (service.popular_products === 'Futsal Booking') {
+        try {
+          // First get all business_resources for this service
+          const { data: resources, error: resourceError } = await supabase
+            .from('business_resources')
+            .select('id')
+            .eq('business_id', service.id);
+
+          if (resourceError) throw resourceError;
+
+          if (resources && resources.length > 0) {
+            const resourceIds = resources.map(r => r.id);
+            
+            // Then count all slots for these resources
+            const { count, error: slotError } = await supabase
+              .from('slots')
+              .select('*', { count: 'exact', head: true })
+              .in('resource_id', resourceIds);
+
+            if (slotError) throw slotError;
+            setSlotCount(count || 0);
+          }
+        } catch (error) {
+          console.error('Error fetching slot count:', error);
+        }
+      }
+    };
+
+    fetchSlotCount();
+  }, [service.id, service.popular_products]);
 
   const checkBookmarkStatus = async () => {
     try {
@@ -612,7 +647,9 @@ export const PopularServiceCard = ({ service }: PopularServiceCardProps) => {
                   >
                     {option === "Free Wifi" ? "FREE WIFI" : 
                      option === "We Sell Online" ? "WE SELL ONLINE" : 
-                     option}
+                     option === "Pickup In-Store" && service.popular_products === "Futsal Booking" 
+                       ? `${slotCount} ${slotCount === 1 ? 'Field' : 'Fields'}`
+                       : option}
                   </span>
                   {index < service.business_options.length - 1 && (
                     <span className="text-xs text-black">|</span>
