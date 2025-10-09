@@ -14,19 +14,24 @@ interface Service {
   name: string;
   description?: string;
   category?: string;
-  city?: string;
-  state?: string;
+  towns?: string;
+  province_district?: string;
   rating?: number;
   image_url?: string;
   website?: string;
+  information_website?: string;
   product_images?: string[] | null;
+  service_images?: string[] | null;
   business_options?: string[] | null;
+  base_price?: number | null;
   starting_price?: string | null;
   license_expired_date?: string | null;
   products_catalog?: string | null;
   facebook_page?: string | null;
   tiktok_url?: string | null;
   phone?: string | null;
+  popular_products?: string | null;
+  business_name?: string | null;
 }
 
 const PopularServices = () => {
@@ -39,19 +44,60 @@ const PopularServices = () => {
 
   const fetchServices = async () => {
     try {
-      const { data, error } = await supabase
-        .from('businesses')
-        .select(`*`)
-        .eq('searchable_business', true)
+      // Fetch latest 5 services from services table with business details
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select(`
+          *,
+          category_id
+        `)
         .order('created_at', { ascending: false })
         .limit(5);
         
-      if (error) {
-        console.error('Error fetching services:', error);
+      if (servicesError) {
+        console.error('Error fetching services:', servicesError);
         return;
       }
+
+      // For each service, fetch corresponding business data
+      const servicesWithBusinessData = await Promise.all(
+        (servicesData || []).map(async (service) => {
+          const { data: businessData } = await supabase
+            .from('businesses')
+            .select('*')
+            .eq('category', service.category_id)
+            .eq('searchable_business', true)
+            .maybeSingle();
+
+          // Combine service and business data
+          return {
+            id: String(service.service_key || service.id),
+            name: businessData?.name || 'Service',
+            business_name: businessData?.name,
+            description: service.services_description,
+            category: businessData?.category,
+            towns: businessData?.towns,
+            province_district: businessData?.province_district,
+            rating: businessData?.rating,
+            image_url: businessData?.image_url,
+            website: businessData?.website,
+            information_website: businessData?.information_website,
+            service_images: service.service_images,
+            product_images: businessData?.product_images,
+            business_options: businessData?.business_options,
+            base_price: null,
+            starting_price: businessData?.starting_price,
+            license_expired_date: businessData?.license_expired_date,
+            products_catalog: service.facilities,
+            facebook_page: businessData?.facebook_page,
+            tiktok_url: businessData?.tiktok_url,
+            phone: service.contact_phone || businessData?.phone,
+            popular_products: service.popular_products,
+          };
+        })
+      );
       
-      setServices(data || []);
+      setServices(servicesWithBusinessData);
     } catch (error) {
       console.error('Error:', error);
     } finally {
