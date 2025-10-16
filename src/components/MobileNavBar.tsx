@@ -18,8 +18,7 @@ const MobileNavBar = React.memo(() => {
     },
     {
       id: "services",
-      label: "Find",
-      labelSecondLine: "Services",
+      label: "Services",
       icon: Wrench,
       path: "/find-services",
       colors: "text-blue-500"
@@ -88,16 +87,10 @@ const MobileNavBar = React.memo(() => {
                 size={20} 
                 className={`mb-1 ${active ? item.colors : 'text-gray-500'}`}
               />
-              <span className={`text-xs font-medium text-center ${
+              <span className={`text-xs font-medium ${
                 active ? 'text-gray-900' : 'text-gray-500'
               }`}>
                 {item.label}
-                {(item as any).labelSecondLine && (
-                  <>
-                    <br />
-                    {(item as any).labelSecondLine}
-                  </>
-                )}
               </span>
             </Link>
           );
