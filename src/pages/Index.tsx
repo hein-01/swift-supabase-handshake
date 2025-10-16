@@ -163,9 +163,9 @@ const Index = () => {
                 onBlur={() => setIsSearchFocused(false)}
                 onKeyDown={e => e.key === 'Enter' && handleSearchSubmit()} 
                 placeholder={placeholderText}
-                className="w-full border border-[#F5F4F8] border-l-0 hover:border-l-0 focus:border-l-0 rounded-l-none text-gray-600 focus-visible:ring-0 text-xs sm:text-sm md:text-base pr-8"
+                className="w-full border border-[#F5F4F8] border-l-0 hover:border-l-0 focus:border-l-0 rounded-l-none text-gray-600 focus-visible:ring-0 text-xs sm:text-sm md:text-base pr-10"
               />
-              <button onClick={handleSearchSubmit} className="absolute right-0 top-1/2 transform -translate-y-1/2 py-2 rounded-md flex items-center justify-center hover:bg-primary hover:bg-opacity-10 active:bg-primary active:bg-opacity-10 transition-colors duration-200">
+              <button onClick={handleSearchSubmit} className="absolute right-0 top-1/2 transform -translate-y-1/2 py-2 px-1 rounded-md flex items-center justify-center hover:bg-primary hover:bg-opacity-10 active:bg-primary active:bg-opacity-10 transition-colors duration-200">
                 <ArrowRight className="h-6 w-6 text-primary hover:text-white active:text-white transition-colors duration-200" />
               </button>
             </div>
