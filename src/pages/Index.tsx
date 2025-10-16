@@ -43,7 +43,7 @@ const Index = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const placeholderText = useTypingEffect(
-    isMobile ? "👈 Please tap, then type keyword" : "👈 Please tap to select/deselect, then enter your search keyword", 
+    isMobile ? "👈 Please tap,then type keyword" : "👈 Please tap to select/deselect,then enter your search keyword", 
     10
   );
   const heroBackgrounds = [heroBg1, heroBg2, heroBg3];
