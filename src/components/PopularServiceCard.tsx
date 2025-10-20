@@ -64,6 +64,7 @@ export const PopularServiceCard = ({ service }: PopularServiceCardProps) => {
   const [showAuthInReviewModal, setShowAuthInReviewModal] = useState(false);
   const [slotCount, setSlotCount] = useState<number>(0);
   const [scheduleHours, setScheduleHours] = useState<string>('');
+  const [fieldType, setFieldType] = useState<string>('');
   const { toast } = useToast();
 
   // Fetch existing reviews when modal opens
@@ -139,13 +140,17 @@ export const PopularServiceCard = ({ service }: PopularServiceCardProps) => {
         // First get business_resources for this service
         const { data: resources, error: resourceError } = await supabase
           .from('business_resources')
-          .select('id')
+          .select('id, field_type')
           .eq('business_id', businessId)
           .limit(1);
 
         if (resourceError) throw resourceError;
 
         if (resources && resources.length > 0) {
+          // Set field_type if available
+          if (resources[0].field_type) {
+            setFieldType(resources[0].field_type);
+          }
           // Get the schedule for this resource
           const { data: schedules, error: scheduleError } = await supabase
             .from('business_schedules')
@@ -710,7 +715,10 @@ export const PopularServiceCard = ({ service }: PopularServiceCardProps) => {
               {scheduleHours && (
                 <>
                   <span className="text-xs text-black">|</span>
-                  <span className="text-xs text-blue-600">{scheduleHours}</span>
+                  <span className="text-xs text-blue-600">
+                    {scheduleHours}
+                    {fieldType && ` | ${fieldType}`}
+                  </span>
                 </>
               )}
             </div>
