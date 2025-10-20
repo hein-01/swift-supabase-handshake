@@ -715,10 +715,13 @@ export const PopularServiceCard = ({ service }: PopularServiceCardProps) => {
               {scheduleHours && (
                 <>
                   <span className="text-xs text-black">|</span>
-                  <span className="text-xs text-blue-600">
-                    {scheduleHours}
-                    {fieldType && ` | ${fieldType}`}
-                  </span>
+                  <span className="text-xs text-blue-600">{scheduleHours}</span>
+                </>
+              )}
+              {fieldType && (
+                <>
+                  <span className="text-xs text-black">|</span>
+                  <span className="text-xs text-purple-600">{fieldType}</span>
                 </>
               )}
             </div>
