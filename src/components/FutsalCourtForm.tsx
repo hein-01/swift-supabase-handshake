@@ -37,6 +37,9 @@ import { convertTo24HourFormat } from "@/lib/timeUtils";
 const formSchema = z.object({
   businessName: z.string().min(1, "Business name is required"),
   numberOfFields: z.string().min(1, "Number of fields is required"),
+  fieldType: z.enum(["Indoor", "Outdoor", "Indoor/Outdoor"], {
+    required_error: "Please select field type",
+  }),
   fieldDetails: z.array(z.object({
     name: z.string().min(1, "Field name is required"),
     price: z.string().min(1, "Price is required"),
@@ -118,6 +121,7 @@ const rules = [
   "Please leave the court on time for the next group.",
   "Players under 18 to be accompanied and supervised by a responsible adult",
   "Proper Footwear Required(Futsal shoes or flat-soled shoes only)",
+  "Footwear Consistency for Safety - All players should either wear shoes or play barefoot",
   "No smoking",
   "No littering (Garbage bins provided)",
   "No Alcohol or Drugs",
@@ -141,6 +145,7 @@ export const FutsalCourtForm = () => {
     defaultValues: {
       businessName: "",
       numberOfFields: "1",
+      fieldType: "Indoor" as "Indoor" | "Outdoor" | "Indoor/Outdoor",
       fieldDetails: [{ name: "Field 1", price: "" }],
       operatingHours: days.map(day => ({
         day,
@@ -298,6 +303,7 @@ export const FutsalCourtForm = () => {
       formData.append('rules', JSON.stringify(values.rules));
       formData.append('popularProducts', 'Futsal Booking');
       formData.append('maxCapacity', '1');
+      formData.append('fieldType', values.fieldType);
       formData.append('fieldDetails', JSON.stringify(values.fieldDetails));
       formData.append('operatingHours', JSON.stringify(values.operatingHours));
       formData.append('paymentMethods', JSON.stringify(values.paymentMethods));
@@ -357,7 +363,7 @@ export const FutsalCourtForm = () => {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {/* Hidden fields */}
-        <input type="hidden" name="searchable_business" value="0" />
+        <input type="hidden" name="searchable_business" value="1" />
         <input type="hidden" name="business_categories.id" value="2f12b3d2-35fa-4fda-ba30-6ca0ceab58d7" />
         <input type="hidden" name="popular_products" value="Futsal Booking" />
         <input type="hidden" name="max_capacity" value="1" />
@@ -413,6 +419,29 @@ export const FutsalCourtForm = () => {
                           {num}
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="fieldType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Are the sports facilities you listed above indoor, outdoor, or both? *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select field type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Indoor">Indoor</SelectItem>
+                      <SelectItem value="Outdoor">Outdoor</SelectItem>
+                      <SelectItem value="Indoor/Outdoor">Indoor/Outdoor</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -746,14 +775,25 @@ export const FutsalCourtForm = () => {
 
                 <AccordionItem value="item-4">
                   <AccordionTrigger className="text-left">
-                    Why Proper Footwear Required(Futsal shoes or flat-soled shoes only)?
+                    Why Proper Footwear Required rule is NOT always mandatory
                   </AccordionTrigger>
                   <AccordionContent className="text-muted-foreground leading-relaxed">
-                    Cleats elevate the heel and change a player's balance and center of gravity, which is not ideal for the fast, technical movements of Futsal. Futsal Shoes are the best option since they are low-profile, lightweight, and have a flat, gum-rubber sole for optimal grip and ball feel. The "No Cleats" rule is not arbitrary. It's a crucial measure to protect the facility's expensive investment and, more importantly, to keep players safe from preventable injuries while preserving the fast, skillful nature of the game.
+                    Although futsal shoes are the best option because they are low-profile, lightweight, and have a flat, gum-rubber sole for optimal grip and ball control, they also help protect the facility's expensive surfaces and, more importantly, keep players safe from preventable injuries while preserving the fast, skillful nature of the game.
+                    This rule is not always mandatory, as the goal is to balance safety with accessibility, keeping the game open to everyone while still encouraging good practice.
+                    If you plan to implement a "Proper Footwear Required" rule at your facility, it is recommended to offer affordable or accessible alternatives so everyone can participate. For example: provide shoe rental or borrowing options, or offer discounted/second-hand pairs through local partnerships or sponsorships.
                   </AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem value="item-5">
+                  <AccordionTrigger className="text-left">
+                    Why Footwear Consistency for Safety?
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground leading-relaxed">
+                    Barefoot players are at higher risk of being stepped on by players wearing shoes, which can lead to bruises, cuts, or even broken toes. Shoes, even futsal shoes with firm soles, can cause injury to someone playing barefoot during fast or physical play.
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="item-6">
                   <AccordionTrigger className="text-left">
                     Why No Glass Bottles / Containers?
                   </AccordionTrigger>

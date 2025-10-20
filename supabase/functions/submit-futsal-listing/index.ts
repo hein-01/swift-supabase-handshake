@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
     const rules = formData.get('rules') as string; // JSON string
     const popularProducts = formData.get('popularProducts') as string;
     const maxCapacity = parseInt(formData.get('maxCapacity') as string);
+    const fieldType = formData.get('fieldType') as string;
     
     // Parse field details
     const fieldDetailsStr = formData.get('fieldDetails') as string;
@@ -234,6 +235,7 @@ Deno.serve(async (req) => {
         service_id: service.id,
         max_capacity: maxCapacity,
         base_price: basePrice,
+        field_type: fieldType,
       })
       .select()
       .single();

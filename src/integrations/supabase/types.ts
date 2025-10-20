@@ -96,6 +96,7 @@ export type Database = {
           base_price: number | null
           business_id: string
           created_at: string
+          field_type: string | null
           id: string
           max_capacity: number
           name: string
@@ -106,6 +107,7 @@ export type Database = {
           base_price?: number | null
           business_id: string
           created_at?: string
+          field_type?: string | null
           id?: string
           max_capacity?: number
           name: string
@@ -116,6 +118,7 @@ export type Database = {
           base_price?: number | null
           business_id?: string
           created_at?: string
+          field_type?: string | null
           id?: string
           max_capacity?: number
           name?: string
