@@ -125,7 +125,7 @@ export const JobCard = ({
         </div>
 
         {/* Apply Section */}
-        <div className="bg-[hsl(var(--primary))] text-primary-foreground p-4 rounded-md -mx-6 -mb-6 mt-4">
+        <div className="bg-[hsl(var(--primary))] text-primary-foreground p-4 -mx-6 -mb-6 mt-4">
           <p className="text-sm mb-3">
             When ready to apply, please click the button to open the chat with this job poster on WhatsApp. 
             Send your CV or ask them anything. (Make sure you have WhatsApp installed!)
