@@ -98,7 +98,7 @@ export const JobCard = ({
         {/* Benefits */}
         {benefits && benefits.length > 0 && (
           <div className="mb-3">
-            <p className="text-sm font-semibold text-[hsl(180,60%,40%)] mb-1">benefits</p>
+            <p className="text-sm font-semibold text-[hsl(180,60%,40%)] mb-1">Benefits:</p>
             {benefits.map((benefit, index) => (
               <p key={index} className="text-sm text-foreground">
                 {benefit}
