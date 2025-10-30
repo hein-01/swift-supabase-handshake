@@ -55,7 +55,7 @@ export const JobCard = ({
 
   return (
     <>
-      <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
+      <div className="bg-card border border-border p-6 shadow-sm">
         {/* Header */}
         <div className="flex justify-between items-start mb-3">
           <div className="flex-1">
@@ -69,7 +69,7 @@ export const JobCard = ({
             variant="destructive"
             size="sm"
             onClick={handleReport}
-            className="text-xs"
+            className="text-xs rounded-none"
           >
             REPORT THIS JOB
           </Button>
