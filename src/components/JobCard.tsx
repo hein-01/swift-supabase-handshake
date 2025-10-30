@@ -91,7 +91,7 @@ export const JobCard = ({
         {/* Age Range */}
         {(ageMin || ageMax) && (
           <p className="text-sm text-[hsl(30,100%,50%)] mb-2">
-            {ageMin} - {ageMax}
+            Age: {ageMin} - {ageMax}
           </p>
         )}
 
