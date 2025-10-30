@@ -79,13 +79,13 @@ export const JobCard = ({
 
         {/* Info Tags */}
         <div className="flex flex-wrap gap-2 mb-3">
-          <Badge variant="secondary" className="bg-[hsl(200,80%,85%)] text-[hsl(200,80%,30%)] hover:bg-[hsl(200,80%,80%)]">
+          <Badge variant="secondary" className="bg-[hsl(200,80%,85%)] text-[hsl(200,80%,30%)] hover:bg-[hsl(200,80%,80%)] rounded-none">
             {jobLocation}
           </Badge>
-          <Badge variant="secondary" className="bg-muted text-muted-foreground">
+          <Badge variant="secondary" className="bg-muted text-muted-foreground rounded-none">
             {jobType}
           </Badge>
-          <Badge variant="secondary" className="bg-[hsl(120,40%,85%)] text-[hsl(120,40%,30%)] hover:bg-[hsl(120,40%,80%)]">
+          <Badge variant="secondary" className="bg-[hsl(120,40%,85%)] text-[hsl(120,40%,30%)] hover:bg-[hsl(120,40%,80%)] rounded-none">
             {educationRequirement}
           </Badge>
         </div>
@@ -115,7 +115,7 @@ export const JobCard = ({
             variant="default"
             size="sm"
             onClick={() => setShowDescription(true)}
-            className="bg-foreground text-background hover:bg-foreground/90"
+            className="bg-foreground text-background hover:bg-foreground/90 rounded-none"
           >
             SEE JOB DESCRIPTION
           </Button>
