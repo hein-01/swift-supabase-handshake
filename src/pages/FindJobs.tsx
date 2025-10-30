@@ -58,7 +58,7 @@ const FindJobs = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
       <main className="pt-16 pb-8">
         {/* Banner Section */}
@@ -99,7 +99,7 @@ const FindJobs = () => {
                 No jobs posted yet. Be the first to post a job!
               </div>
             ) : (
-              <div className="grid gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {jobs.map((job) => (
                   <JobCard
                     key={job.id}
