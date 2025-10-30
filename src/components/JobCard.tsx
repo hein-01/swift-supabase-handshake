@@ -55,9 +55,19 @@ export const JobCard = ({
 
   return (
     <>
-      <div className="bg-card border border-border p-6 shadow-sm">
+      <div className="bg-card border border-border p-6 shadow-sm relative">
+        {/* Report Button */}
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={handleReport}
+          className="text-xs rounded-none absolute top-0 right-0"
+        >
+          REPORT THIS JOB
+        </Button>
+
         {/* Header */}
-        <div className="flex justify-between items-start mb-3">
+        <div className="mb-3">
           <div className="flex-1">
             <p className="text-xs text-muted-foreground uppercase mb-1">{businessName}</p>
             <h3 className="text-2xl font-bold text-foreground mb-2">{jobTitle}</h3>
@@ -65,14 +75,6 @@ export const JobCard = ({
               $ {salaryAmount} per {salaryType}
             </p>
           </div>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleReport}
-            className="text-xs rounded-none"
-          >
-            REPORT THIS JOB
-          </Button>
         </div>
 
         {/* Info Tags */}
