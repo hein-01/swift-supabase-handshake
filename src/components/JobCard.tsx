@@ -44,7 +44,7 @@ export const JobCard = ({
   const [showDescription, setShowDescription] = useState(false);
 
   const handleApply = () => {
-    const viberLink = `viber://chat?number=%2B${contactNumber.replace(/\+/g, '')}`;
+    const viberLink = `viber://chat?url=viber://call&uri=viber://call/chat?number=+95${contactNumber.replace(/\+/g, '')}`;
     window.open(viberLink, '_blank');
   };
 
