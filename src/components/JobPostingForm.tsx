@@ -148,7 +148,7 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
     const fetchLocations = async () => {
       const { data, error } = await supabase
         .from('locations')
-        .select('towns');
+        .select('province_district');
       
       if (error) {
         console.error('Error fetching locations:', error);
@@ -160,13 +160,26 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
         return;
       }
 
-      // Flatten the towns arrays and get unique values
-      const allTowns = data
-        .flatMap(location => location.towns || [])
-        .filter((town, index, self) => self.indexOf(town) === index)
-        .sort();
-      
-      setLocations(allTowns);
+      // Extract unique province_district values
+      const values = (data || [])
+        .map((row: any) => row.province_district as string)
+        .filter((v) => typeof v === 'string' && v.trim().length > 0);
+
+      const uniqueSorted = Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
+
+      // Ensure 'Yangon' and 'Mandalay' appear at the top (if present)
+      const pinnedOrder = ["Yangon", "Mandalay"];
+      const lower = uniqueSorted.map((v) => v.toLowerCase());
+      const pinnedTop: string[] = [];
+      for (const p of pinnedOrder) {
+        const idx = lower.indexOf(p.toLowerCase());
+        if (idx !== -1) pinnedTop.push(uniqueSorted[idx]);
+      }
+      const rest = uniqueSorted.filter(
+        (v) => !pinnedOrder.some((p) => v.toLowerCase() === p.toLowerCase())
+      );
+
+      setLocations([...pinnedTop, ...rest]);
     };
 
     fetchLocations();
