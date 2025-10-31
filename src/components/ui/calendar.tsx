@@ -31,9 +31,9 @@ function Calendar({
         nav_button_next: "",
         table: "w-full border-collapse",
         head_row: "grid grid-cols-7 w-full mb-1",
-        head_cell: "text-foreground font-semibold text-xs h-9 w-9 flex items-center justify-center",
+        head_cell: "text-foreground font-semibold text-xs h-9 w-9 flex items-center justify-center mx-auto",
         row: "grid grid-cols-7 w-full",
-        cell: "text-center text-sm p-0 relative",
+        cell: "text-center text-sm p-0 relative h-9 w-9 mx-auto",
         day: cn(
           "mx-auto h-9 w-9 inline-flex items-center justify-center p-0 font-normal rounded-full hover:bg-accent/50 transition-colors"
         ),
