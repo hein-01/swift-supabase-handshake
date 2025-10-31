@@ -16,7 +16,7 @@ interface JobCardProps {
   id: string;
   businessName: string;
   jobTitle: string;
-  salaryAmount: number;
+  salaryAmount: string;
   salaryType: string;
   jobLocation: string;
   jobType: string;
@@ -115,7 +115,7 @@ export const JobCard = ({
               <p className="text-xs text-muted-foreground uppercase mb-1">{businessName}</p>
               <h3 className="text-2xl font-bold text-foreground mb-2">{jobTitle}</h3>
               <p className="text-base font-semibold text-[hsl(var(--primary))]">
-                MMK {salaryAmount?.toLocaleString()} <span className="text-muted-foreground">({salaryType})</span>
+                MMK {salaryAmount} <span className="text-muted-foreground">({salaryType})</span>
               </p>
             </div>
           </div>

@@ -12,7 +12,7 @@ interface JobPosting {
   id: string;
   business_name: string;
   job_title: string;
-  salary_amount: number;
+  salary_amount: string;
   salary_type: string;
   job_location: string;
   job_type: string;

@@ -371,7 +371,7 @@ export type Database = {
           job_location: string
           job_title: string
           job_type: string
-          salary_amount: number
+          salary_amount: string
           salary_type: string
           updated_at: string
           user_id: string
@@ -390,7 +390,7 @@ export type Database = {
           job_location: string
           job_title: string
           job_type: string
-          salary_amount: number
+          salary_amount: string
           salary_type: string
           updated_at?: string
           user_id: string
@@ -409,7 +409,7 @@ export type Database = {
           job_location?: string
           job_title?: string
           job_type?: string
-          salary_amount?: number
+          salary_amount?: string
           salary_type?: string
           updated_at?: string
           user_id?: string

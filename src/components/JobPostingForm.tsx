@@ -70,7 +70,7 @@ const formSchema = z.object({
   salaryType: z.string().min(1, "Please select a salary type"),
   salary: z.string()
     .min(1, "Salary amount is required")
-    .regex(/^\d+$/, "Please enter only digits (no currency symbols or spaces)"),
+    .max(100, "Salary must be less than 100 characters"),
   ageRequirement: z.enum(["any", "18-60", "custom"]),
   ageFrom: z.number().min(18).max(100).optional(),
   ageTo: z.number().min(18).max(100).optional(),
@@ -403,13 +403,14 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
           name="salary"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Salary Amount(please only add digits such as 1005000): *</FormLabel>
+              <FormLabel>Salary Amount *</FormLabel>
+              <FormDescription className="text-xs text-muted-foreground">
+                (Example: Negotiable, Less than 500000, 450000 etc)
+              </FormDescription>
               <FormControl>
                 <Input 
                   type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="1005000" 
+                  placeholder="e.g., Negotiable or 500000" 
                   {...field} 
                 />
               </FormControl>
