@@ -641,7 +641,7 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="start">
+                <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                   <Calendar
                     mode="single"
                     selected={field.value}
@@ -650,7 +650,6 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
                       date < new Date() || date > maxDate
                     }
                     initialFocus
-                    className={cn("p-3 pointer-events-auto")}
                   />
                 </PopoverContent>
               </Popover>
