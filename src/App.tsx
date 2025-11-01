@@ -44,7 +44,11 @@ const App = () => (
             <Route path="/find-services" element={<FindServices />} />
             <Route path="/find-shops" element={<FindShops />} />
             <Route path="/find-jobs" element={<FindJobs />} />
-            <Route path="/post-a-job" element={<PostAJob />} />
+            <Route path="/post-a-job" element={
+              <ProtectedRoute>
+                <PostAJob />
+              </ProtectedRoute>
+            } />
             <Route path="/business/:id" element={<BusinessDetail />} />
             <Route path="/list-business" element={<ListBusiness />} />
             <Route path="/service-selection" element={<ServiceSelection />} />

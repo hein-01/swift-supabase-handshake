@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+// Removed calendar-based deadline picker in favor of Select options
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,60 +25,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { addDays, endOfMonth, addMonths, format } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-const jobTitleOptions = [
-  "Driver",
-  "Rider",
-  "Delivery Person",
-  "Security Officer",
-  "Barista",
-  "Cashier",
-  "Kitchen Assistant",
-  "Cleaner",
-  "Nanny",
-  "F&B Service Crew",
-  "Waiter",
-  "Waitress",
-  "Trainee Chef",
-  "Catering Assistant",
-  "Construction Worker",
-  "Custom",
-];
-
-const educationOptions = [
-  "Not a necessary requirement",
-  "Secondary education preferred",
-  "High school education preferred",
-  "High School Graduates Preferred",
-  "GCE O'Level",
-  "Custom",
-];
+type TranslationOption = { key: string; label_en: string; label_my: string };
 
 const formSchema = z.object({
-  jobTitle: z.string().min(1, "Please select a job title"),
+  jobTitleKey: z.string().min(1, "Please select a job title"),
   customJobTitle: z.string().optional(),
   company: z.string().min(2, "Company name must be at least 2 characters"),
-  location: z.string().min(1, "Please select a location"),
+  locationKey: z.string().min(1, "Please select a location"),
   jobType: z.string().min(1, "Please select a job type"),
-  jobDescription: z.string().min(20, "Job description must be at least 20 characters"),
-  salaryType: z.string().min(1, "Please select a salary type"),
-  salary: z.string()
-    .min(1, "Salary amount is required")
-    .max(100, "Salary must be less than 100 characters"),
+  jobDescriptionMy: z.string().min(20, "Job description must be at least 20 characters"),
+  salaryType: z.enum(["monthly", "daily", "hourly"], { required_error: "Select a salary type" }),
+  salaryStructure: z.enum(["fixed", "range", "min_only", "max_only", "negotiable"], { required_error: "Select a salary structure" }),
+  salaryFixed: z.number().optional(),
+  salaryFrom: z.number().optional(),
+  salaryTo: z.number().optional(),
+  salaryMinOnly: z.number().optional(),
+  salaryMaxOnly: z.number().optional(),
   ageRequirement: z.enum(["any", "18-60", "custom"]),
   ageFrom: z.number().min(18).max(100).optional(),
   ageTo: z.number().min(18).max(100).optional(),
-  educationRequirement: z.string().min(1, "Please select an education requirement"),
+  educationKey: z.string().min(1, "Please select an education requirement"),
   customEducationRequirement: z.string().optional(),
   benefits: z.array(z.string()).default([]),
-  applicationDeadline: z.date({
-    required_error: "Application deadline is required",
-  }),
+  // Application deadline is now a Select with preset options
+  applicationDeadline: z.enum([
+    "two_weeks",
+    "end_this_month",
+    "30_days",
+    "60_days",
+    "end_next_month",
+  ], { required_error: "Application deadline is required" }),
   viberNumber: z.string()
     .regex(/^09\d{7,9}$/, "Viber number must start with 09 and be valid"),
   verification: z.string()
@@ -94,7 +73,7 @@ const formSchema = z.object({
   message: "Invalid age range. 'From' age must be less than or equal to 'To' age",
   path: ["ageTo"],
 }).refine((data) => {
-  if (data.jobTitle === "Custom") {
+  if (data.jobTitleKey === "custom") {
     return data.customJobTitle && data.customJobTitle.trim().length >= 3;
   }
   return true;
@@ -102,13 +81,33 @@ const formSchema = z.object({
   message: "Custom job title must be at least 3 characters",
   path: ["customJobTitle"],
 }).refine((data) => {
-  if (data.educationRequirement === "Custom") {
+  if (data.educationKey === "custom") {
     return data.customEducationRequirement && data.customEducationRequirement.trim().length >= 3;
   }
   return true;
 }, {
   message: "Custom education requirement must be at least 3 characters",
   path: ["customEducationRequirement"],
+}).refine((data) => {
+  // Validate salary inputs conditional on structure
+  const needNumber = (v?: number) => typeof v === 'number' && !Number.isNaN(v);
+  switch (data.salaryStructure) {
+    case 'fixed':
+      return needNumber(data.salaryFixed);
+    case 'range':
+      return needNumber(data.salaryFrom) && needNumber(data.salaryTo) && (data.salaryFrom as number) <= (data.salaryTo as number);
+    case 'min_only':
+      return needNumber(data.salaryMinOnly);
+    case 'max_only':
+      return needNumber(data.salaryMaxOnly);
+    case 'negotiable':
+      return true;
+    default:
+      return false;
+  }
+}, {
+  message: "Please provide valid salary amount(s) for the selected structure",
+  path: ["salaryStructure"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -123,15 +122,15 @@ const benefitsOptions = [
   { id: "students-ok", label: "Students OK" },
 ];
 
-interface JobPostingFormProps {
-  onSuccess?: () => void;
-}
+interface JobPostingFormProps { onSuccess?: () => void; }
 
 const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
   const [showCustomAge, setShowCustomAge] = useState(false);
   const [showCustomJobTitle, setShowCustomJobTitle] = useState(false);
   const [showCustomEducation, setShowCustomEducation] = useState(false);
-  const [locations, setLocations] = useState<string[]>([]);
+  const [jobTitles, setJobTitles] = useState<TranslationOption[]>([]);
+  const [locations, setLocations] = useState<TranslationOption[]>([]);
+  const [educations, setEducations] = useState<TranslationOption[]>([]);
   
   // Generate random numbers for verification (only once on mount)
   const verificationNumbers = useMemo(() => ({
@@ -141,62 +140,69 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
   
   const correctAnswer = verificationNumbers.num1 + verificationNumbers.num2;
   
-  const maxDate = new Date();
-  maxDate.setDate(maxDate.getDate() + 60);
+  // Map selected deadline option to an actual future Date
+  const computeDeadlineDate = (option: "two_weeks" | "end_this_month" | "30_days" | "60_days" | "end_next_month") => {
+    const today = new Date();
+    switch (option) {
+      case "two_weeks":
+        return addDays(today, 14);
+      case "end_this_month":
+        return endOfMonth(today);
+      case "30_days":
+        return addDays(today, 30);
+      case "60_days":
+        return addDays(today, 60);
+      case "end_next_month":
+        return endOfMonth(addMonths(today, 1));
+      default:
+        return addDays(today, 14);
+    }
+  };
 
   useEffect(() => {
-    const fetchLocations = async () => {
-      const { data, error } = await supabase
-        .from('locations')
-        .select('province_district');
-      
-      if (error) {
-        console.error('Error fetching locations:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load locations",
-          variant: "destructive",
-        });
+    const fetchAll = async () => {
+      type TitleRow = { title_key: string; label_en: string; label_my: string };
+      type LocRow = { location_key: string; label_en: string; label_my: string };
+      type EduRow = { education_key: string; label_en: string; label_my: string };
+
+      const [{ data: jt, error: e1 }, { data: loc, error: e2 }, { data: edu, error: e3 }] = await Promise.all([
+        supabase.from('job_titles_translation').select('title_key,label_en,label_my'),
+        supabase.from('locations_translation').select('location_key,label_en,label_my'),
+        supabase.from('education_translation').select('education_key,label_en,label_my'),
+      ]);
+
+      if (e1 || e2 || e3) {
+        console.error('Error fetching translations:', e1 || e2 || e3);
+        toast({ title: 'Error', description: 'Failed to load dropdown options', variant: 'destructive' });
         return;
       }
 
-      // Extract unique province_district values
-      const values = (data || [])
-        .map((row: any) => row.province_district as string)
-        .filter((v) => typeof v === 'string' && v.trim().length > 0);
+      const jtRows = (jt ?? []) as TitleRow[];
+      const locRows = (loc ?? []) as LocRow[];
+      const eduRows = (edu ?? []) as EduRow[];
 
-      const uniqueSorted = Array.from(new Set(values)).sort((a, b) => a.localeCompare(b));
-
-      // Ensure 'Yangon' and 'Mandalay' appear at the top (if present)
-      const pinnedOrder = ["Yangon", "Mandalay"];
-      const lower = uniqueSorted.map((v) => v.toLowerCase());
-      const pinnedTop: string[] = [];
-      for (const p of pinnedOrder) {
-        const idx = lower.indexOf(p.toLowerCase());
-        if (idx !== -1) pinnedTop.push(uniqueSorted[idx]);
-      }
-      const rest = uniqueSorted.filter(
-        (v) => !pinnedOrder.some((p) => v.toLowerCase() === p.toLowerCase())
-      );
-
-      setLocations([...pinnedTop, ...rest]);
+      setJobTitles(jtRows.map(r => ({ key: r.title_key, label_en: r.label_en, label_my: r.label_my })));
+      setLocations(locRows.map(r => ({ key: r.location_key, label_en: r.label_en, label_my: r.label_my })));
+      setEducations(eduRows.map(r => ({ key: r.education_key, label_en: r.label_en, label_my: r.label_my })));
     };
-
-    fetchLocations();
+    fetchAll();
   }, []);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      jobTitle: "",
+      jobTitleKey: "",
       company: "",
-      location: "",
+      locationKey: "",
       jobType: "",
-      jobDescription: "",
-      salaryType: "",
-      salary: "",
+  jobDescriptionMy: "",
+      salaryFixed: undefined,
+      salaryFrom: undefined,
+      salaryTo: undefined,
+      salaryMinOnly: undefined,
+      salaryMaxOnly: undefined,
       ageRequirement: "any",
-      educationRequirement: "",
+      educationKey: "",
       benefits: [],
       viberNumber: "",
       verification: "",
@@ -204,6 +210,21 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
       customEducationRequirement: "",
     },
   });
+
+  const toAsciiDigits = (input: string) => {
+    const map: Record<string, string> = {
+      '၀': '0','၁': '1','၂': '2','၃': '3','၄': '4','၅': '5','၆': '6','၇': '7','၈': '8','၉': '9'
+    };
+    return input.replace(/[၀-၉]/g, (d) => map[d] ?? d);
+  };
+
+  const parseNumberInput = (val?: number | string | null) => {
+    if (val === null || val === undefined) return undefined;
+    if (typeof val === 'number') return val;
+    const cleaned = toAsciiDigits(String(val)).replace(/,/g, '').trim();
+    const num = Number(cleaned);
+    return Number.isFinite(num) ? num : undefined;
+  };
 
   const onSubmit = async (data: FormValues) => {
     // Server-side verification check
@@ -218,7 +239,7 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
     }
     
     // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
       toast({
@@ -229,37 +250,109 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
       return;
     }
 
-    // Prepare job posting data
-    const jobTitle = data.jobTitle === "Custom" ? data.customJobTitle : data.jobTitle;
-    const educationReq = data.educationRequirement === "Custom" 
-      ? data.customEducationRequirement 
-      : data.educationRequirement;
+    // Compute salary min/max based on structure and type
+    const toBase = (v?: number) => {
+      if (v === undefined) return undefined;
+      return data.salaryType === 'monthly' ? Math.round(v * 100000) : Math.round(v);
+    };
+
+    let salary_min: number | null = null;
+    let salary_max: number | null = null;
+    switch (data.salaryStructure) {
+      case 'fixed': {
+        const v = toBase(parseNumberInput(data.salaryFixed));
+        salary_min = v ?? null; salary_max = v ?? null; break;
+      }
+      case 'range': {
+        const v1 = toBase(parseNumberInput(data.salaryFrom));
+        const v2 = toBase(parseNumberInput(data.salaryTo));
+        salary_min = v1 ?? null; salary_max = v2 ?? null; break;
+      }
+      case 'min_only': {
+        const v = toBase(parseNumberInput(data.salaryMinOnly));
+        salary_min = v ?? null; salary_max = null; break;
+      }
+      case 'max_only': {
+        const v = toBase(parseNumberInput(data.salaryMaxOnly));
+        salary_min = null; salary_max = v ?? null; break;
+      }
+      case 'negotiable':
+        salary_min = null; salary_max = null; break;
+    }
+
+    const job_title_custom = data.jobTitleKey === 'custom' ? (data.customJobTitle || '') : null;
+    const education_custom = data.educationKey === 'custom' ? (data.customEducationRequirement || '') : null;
+
+    const description_my = data.jobDescriptionMy;
+    // Placeholder for AI translation. Replace with actual service call.
+    const description_en = description_my; 
 
     // Insert into database
+    const selectedDeadlineDate = computeDeadlineDate(data.applicationDeadline);
+    const deadlineIsoDate = format(selectedDeadlineDate, "yyyy-MM-dd");
+
+    // Build legacy-compatible values to satisfy older NOT NULL columns and policies
+    const titleLabelEn = jobTitles.find(t => t.key === data.jobTitleKey)?.label_en || data.customJobTitle || data.jobTitleKey;
+    const locationLabelEn = locations.find(l => l.key === data.locationKey)?.label_en || data.locationKey;
+    const educationLabelEn = educations.find(e => e.key === data.educationKey)?.label_en || data.customEducationRequirement || data.educationKey;
+
+    const legacyNumericSalary = () => {
+      const toNum = (v?: number) => parseNumberInput(v) ?? undefined;
+      switch (data.salaryStructure) {
+        case 'fixed':
+          return toNum(data.salaryFixed) ?? 0;
+        case 'range':
+          return toNum(data.salaryTo) ?? toNum(data.salaryFrom) ?? 0;
+        case 'min_only':
+          return toNum(data.salaryMinOnly) ?? 0;
+        case 'max_only':
+          return toNum(data.salaryMaxOnly) ?? 0;
+        case 'negotiable':
+        default:
+          return 0;
+      }
+    };
+
+    const basePayload = {
+      job_title_key: data.jobTitleKey,
+      job_location_key: data.locationKey,
+      education_key: data.educationKey,
+      job_title_custom,
+      education_custom,
+      salary_structure: data.salaryStructure,
+      salary_type: data.salaryType,
+      salary_min,
+      salary_max,
+      description_my,
+      description_en,
+      business_name: data.company,
+      job_type: data.jobType,
+      age_min: data.ageRequirement === 'custom' ? data.ageFrom ?? null : (data.ageRequirement === '18-60' ? 18 : null),
+      age_max: data.ageRequirement === 'custom' ? data.ageTo ?? null : (data.ageRequirement === '18-60' ? 60 : null),
+      benefits: data.benefits,
+      application_deadline: deadlineIsoDate,
+      phone_number: data.viberNumber,
+    } as const;
+
+    const legacyCompat = {
+      user_id: user.id,
+      job_title: titleLabelEn,
+      job_location: locationLabelEn,
+      education_requirement: educationLabelEn,
+      salary_amount: legacyNumericSalary(),
+      description: description_my,
+      contact_number: data.viberNumber,
+    } as const;
+
     const { error } = await supabase
       .from('job_postings')
-      .insert({
-        user_id: user.id,
-        job_title: jobTitle || "",
-        business_name: data.company,
-        job_location: data.location,
-        job_type: data.jobType,
-        salary_type: data.salaryType,
-        salary_amount: parseInt(data.salary),
-        age_min: data.ageRequirement === "custom" ? data.ageFrom : (data.ageRequirement === "18-60" ? 18 : null),
-        age_max: data.ageRequirement === "custom" ? data.ageTo : (data.ageRequirement === "18-60" ? 60 : null),
-        education_requirement: educationReq || "",
-        benefits: data.benefits,
-        application_deadline: data.applicationDeadline,
-        contact_number: data.viberNumber,
-        description: data.jobDescription,
-      } as any);
+      .insert([{ ...(basePayload as any), ...(legacyCompat as any) }]);
 
     if (error) {
       console.error("Error posting job:", error);
       toast({
         title: "Error",
-        description: "Failed to post job. Please try again.",
+        description: `Failed to post job. ${error.message || ''}`,
         variant: "destructive",
       });
       return;
@@ -278,17 +371,15 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-card p-8 rounded-xl border-2 border-primary/20 shadow-2xl shadow-primary/10 hover:shadow-primary/20 transition-shadow duration-300">
         <FormField
           control={form.control}
-          name="jobTitle"
+          name="jobTitleKey"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Job Title *</FormLabel>
               <Select 
                 onValueChange={(value) => {
                   field.onChange(value);
-                  setShowCustomJobTitle(value === "Custom");
-                  if (value !== "Custom") {
-                    form.setValue("customJobTitle", "");
-                  }
+                  setShowCustomJobTitle(value === "custom");
+                  if (value !== "custom") form.setValue("customJobTitle", "");
                 }}
                 defaultValue={field.value}
               >
@@ -297,10 +388,10 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
                     <SelectValue placeholder="Select a job title" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent className="bg-background z-50">
-                  {jobTitleOptions.map((title) => (
-                    <SelectItem key={title} value={title}>
-                      {title}
+                <SelectContent className="bg-background z-50 max-h-[300px]">
+                  {jobTitles.map((t) => (
+                    <SelectItem key={t.key} value={t.key}>
+                      {t.label_en} / {t.label_my}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -342,7 +433,7 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
 
         <FormField
           control={form.control}
-          name="location"
+          name="locationKey"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Location *</FormLabel>
@@ -353,9 +444,9 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent className="bg-background z-50 max-h-[300px]">
-                  {locations.map((location) => (
-                    <SelectItem key={location} value={location}>
-                      {location}
+                  {locations.map((l) => (
+                    <SelectItem key={l.key} value={l.key}>
+                      {l.label_en} ({l.label_my})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -401,9 +492,9 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent className="bg-background z-50">
-                  <SelectItem value="Daily Pay">Daily Pay</SelectItem>
-                  <SelectItem value="Monthly Pay">Monthly Pay</SelectItem>
-                  <SelectItem value="Hourly Pay">Hourly Pay</SelectItem>
+                  <SelectItem value="monthly">Monthly Pay</SelectItem>
+                  <SelectItem value="daily">Daily Pay</SelectItem>
+                  <SelectItem value="hourly">Hourly Pay</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -413,24 +504,166 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
 
         <FormField
           control={form.control}
-          name="salary"
+          name="salaryStructure"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Salary Amount *</FormLabel>
-              <FormDescription className="text-xs text-muted-foreground">
-                (Example: Negotiable, Less than 500000, 450000 etc)
-              </FormDescription>
+            <FormItem className="space-y-3">
+              <FormLabel>Salary Structure *</FormLabel>
               <FormControl>
-                <Input 
-                  type="text"
-                  placeholder="e.g., Negotiable or 500000" 
-                  {...field} 
-                />
+                <RadioGroup
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  className="flex flex-col space-y-1"
+                >
+                  <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="fixed" />
+                    </FormControl>
+                    <FormLabel className="font-normal cursor-pointer">Fixed Amount</FormLabel>
+                  </FormItem>
+                  <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="range" />
+                    </FormControl>
+                    <FormLabel className="font-normal cursor-pointer">Range</FormLabel>
+                  </FormItem>
+                  <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="min_only" />
+                    </FormControl>
+                    <FormLabel className="font-normal cursor-pointer">Minimum Amount</FormLabel>
+                  </FormItem>
+                  <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="max_only" />
+                    </FormControl>
+                    <FormLabel className="font-normal cursor-pointer">Maximum Amount</FormLabel>
+                  </FormItem>
+                  <FormItem className="flex items-center space-x-3 space-y-0">
+                    <FormControl>
+                      <RadioGroupItem value="negotiable" />
+                    </FormControl>
+                    <FormLabel className="font-normal cursor-pointer">Negotiable</FormLabel>
+                  </FormItem>
+                </RadioGroup>
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+
+        {/* Conditional Salary Inputs */}
+        {(() => {
+          const st = form.watch('salaryStructure');
+          const ty = form.watch('salaryType');
+          const isMonthly = ty === 'monthly';
+          const amountLabel = isMonthly ? 'Amount (in Lakhs)' : 'Amount (in MMK)';
+          const fromLabel = isMonthly ? 'From (in Lakhs)' : 'From (in MMK)';
+          const toLabel = isMonthly ? 'To (in Lakhs)' : 'To (in MMK)';
+          const helper = isMonthly
+            ? 'e.g., Type 5 for 5 Lakhs or 5.5 for 5.5 Lakhs.'
+            : 'e.g., Type 20000 for 20,000 Kyats.';
+
+          const numberInputProps = {
+            inputMode: 'decimal' as const,
+            onInput: (e: React.FormEvent<HTMLInputElement>) => {
+              const t = e.currentTarget;
+              const converted = toAsciiDigits(t.value);
+              if (converted !== t.value) t.value = converted;
+            }
+          };
+
+          if (st === 'fixed') {
+            return (
+              <FormField
+                control={form.control}
+                name="salaryFixed"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{amountLabel} *</FormLabel>
+                    <FormDescription className="text-xs text-muted-foreground">{helper}</FormDescription>
+                    <FormControl>
+                      <Input type="number" step="any" placeholder={isMonthly ? '5.5' : '20000'} {...field} {...numberInputProps} onChange={(e) => field.onChange(parseNumberInput(e.target.value))} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            );
+          }
+          if (st === 'range') {
+            return (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="salaryFrom"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{fromLabel} *</FormLabel>
+                      <FormDescription className="text-xs text-muted-foreground">{helper}</FormDescription>
+                      <FormControl>
+                        <Input type="number" step="any" placeholder={isMonthly ? '5' : '20000'} {...field} {...numberInputProps} onChange={(e) => field.onChange(parseNumberInput(e.target.value))} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="salaryTo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{toLabel} *</FormLabel>
+                      <FormDescription className="text-xs text-muted-foreground">{helper}</FormDescription>
+                      <FormControl>
+                        <Input type="number" step="any" placeholder={isMonthly ? '6' : '30000'} {...field} {...numberInputProps} onChange={(e) => field.onChange(parseNumberInput(e.target.value))} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            );
+          }
+          if (st === 'min_only') {
+            return (
+              <FormField
+                control={form.control}
+                name="salaryMinOnly"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{fromLabel} *</FormLabel>
+                    <FormDescription className="text-xs text-muted-foreground">{helper}</FormDescription>
+                    <FormControl>
+                      <Input type="number" step="any" placeholder={isMonthly ? '5' : '20000'} {...field} {...numberInputProps} onChange={(e) => field.onChange(parseNumberInput(e.target.value))} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            );
+          }
+          if (st === 'max_only') {
+            return (
+              <FormField
+                control={form.control}
+                name="salaryMaxOnly"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{toLabel} *</FormLabel>
+                    <FormDescription className="text-xs text-muted-foreground">{helper}</FormDescription>
+                    <FormControl>
+                      <Input type="number" step="any" placeholder={isMonthly ? '6' : '30000'} {...field} {...numberInputProps} onChange={(e) => field.onChange(parseNumberInput(e.target.value))} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            );
+          }
+          return null;
+        })()}
+
+        {/* Salary free-text field removed in favor of structured inputs above */}
 
         <FormField
           control={form.control}
@@ -528,7 +761,7 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
 
         <FormField
           control={form.control}
-          name="educationRequirement"
+          name="educationKey"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Minimum Education Requirements *</FormLabel>
@@ -538,8 +771,8 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
               <Select 
                 onValueChange={(value) => {
                   field.onChange(value);
-                  setShowCustomEducation(value === "Custom");
-                  if (value !== "Custom") {
+                  setShowCustomEducation(value === "custom");
+                  if (value !== "custom") {
                     form.setValue("customEducationRequirement", "");
                   }
                 }}
@@ -551,9 +784,9 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent className="bg-background z-50">
-                  {educationOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
+                  {educations.map((e) => (
+                    <SelectItem key={e.key} value={e.key}>
+                      {e.label_en} / {e.label_my}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -634,41 +867,24 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
           control={form.control}
           name="applicationDeadline"
           render={({ field }) => (
-            <FormItem className="flex flex-col">
+            <FormItem>
               <FormLabel>Application Deadline *</FormLabel>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <FormControl>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full pl-3 text-left font-normal",
-                        !field.value && "text-muted-foreground"
-                      )}
-                    >
-                      {field.value ? (
-                        format(field.value, "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                    </Button>
-                  </FormControl>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={field.value}
-                    onSelect={field.onChange}
-                    disabled={(date) =>
-                      date < new Date() || date > maxDate
-                    }
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select application deadline" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="two_weeks">In two weeks</SelectItem>
+                  <SelectItem value="end_this_month">End of this month</SelectItem>
+                  <SelectItem value="30_days">30 days</SelectItem>
+                  <SelectItem value="60_days">60 days</SelectItem>
+                  <SelectItem value="end_next_month">End of next month</SelectItem>
+                </SelectContent>
+              </Select>
               <FormDescription className="text-accent-foreground font-medium bg-accent/10 px-3 py-2 rounded-lg border border-accent/20 mt-2">
-                Must be within 60 days from today
+                We’ll automatically calculate and store the exact deadline date.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -724,7 +940,7 @@ const JobPostingForm = ({ onSuccess }: JobPostingFormProps) => {
 
         <FormField
           control={form.control}
-          name="jobDescription"
+          name="jobDescriptionMy"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Job Description *</FormLabel>

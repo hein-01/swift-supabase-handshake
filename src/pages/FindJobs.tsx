@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { JobCard } from "@/components/JobCard";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
@@ -17,33 +17,68 @@ import { useToast } from "@/hooks/use-toast";
 import jobBannerBg from "@/assets/job-banner-bg.jpg";
 import { ChevronDown } from "lucide-react";
 
-interface JobPosting {
+type JobRow = {
   id: string;
-  business_name: string;
-  job_title: string;
-  salary_amount: string;
-  salary_type: string;
-  job_location: string;
-  job_type: string;
-  education_requirement: string;
+  business_name: string | null;
+  job_title_key: string | null;
+  job_title_custom: string | null;
+  job_title?: string | null;
+  job_titles_translation?: { label_en: string; label_my: string } | null;
+  job_location_key: string | null;
+  locations_translation?: { label_en: string; label_my: string } | null;
+  education_key: string | null;
+  education_custom: string | null;
+  education_translation?: { label_en: string; label_my: string } | null;
+  salary_structure: string;
+  salary_type: 'monthly' | 'daily' | 'hourly';
+  salary_min: number | null;
+  salary_max: number | null;
+  job_type: string | null;
   age_min: number | null;
   age_max: number | null;
   benefits: string[] | null;
-  application_deadline: string;
-  description: string;
-  contact_number: string;
-}
+  application_deadline: string | null;
+  description_my: string | null;
+  phone_number: string | null;
+};
+
+type Title = { key: string; en: string; my: string };
+type Location = { key: string; en: string; my: string };
+type Education = { key: string; en: string; my: string };
+
+type CardData = {
+  id: string;
+  businessName: string;
+  jobTitleMy: string;
+  salaryDisplay: string;
+  jobLocationMy: string;
+  jobType: string;
+  educationMy: string;
+  ageMin: number | null;
+  ageMax: number | null;
+  benefits: string[] | null;
+  applicationDeadline: string;
+  descriptionMy: string;
+  contactNumber?: string | null;
+};
 
 const FindJobs = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [jobs, setJobs] = useState<JobPosting[]>([]);
+  const [jobs, setJobs] = useState<CardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const PAGE_SIZE = 10;
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const [triggerWidth, setTriggerWidth] = useState(0);
+  const [titles, setTitles] = useState<Title[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [educations, setEducations] = useState<Education[]>([]);
+  const [refsLoaded, setRefsLoaded] = useState(false);
+  const titleMap = useMemo(() => Object.fromEntries(titles.map(t => [t.key, t])), [titles]);
+  const locMap = useMemo(() => Object.fromEntries(locations.map(l => [l.key, l])), [locations]);
+  const eduMap = useMemo(() => Object.fromEntries(educations.map(e => [e.key, e])), [educations]);
 
   useEffect(() => {
     if (!triggerRef.current) return;
@@ -57,50 +92,113 @@ const FindJobs = () => {
     setTriggerWidth(el.getBoundingClientRect().width);
     return () => ro.disconnect();
   }, []);
-  // Filters state
-  const FILTER_OPTIONS = [
-    "All Jobs",
-    "All Jobs (No minimum education requirement)",
-    "All Jobs (Secondary school education)",
-    "All Jobs (High School education)",
-    "All Jobs with High School Graduates Preferred",
-    "Driver",
-    "Rider",
-    "Delivery Person",
-    "Security Officer",
-    "Barista",
-    "Cashier",
-    "Kitchen Assistant",
-    "Cleaner",
-    "Nanny",
-    "F&B Service Crew",
-    "Waiter",
-    "Waitress",
-    "Trainee Chef",
-    "Catering Assistant",
-    "Construction Worker",
-    "Others",
-  ] as const;
-
-  type FilterOption = (typeof FILTER_OPTIONS)[number];
-  const [selectedOptions, setSelectedOptions] = useState<FilterOption[]>([]);
-  const [appliedOptions, setAppliedOptions] = useState<FilterOption[]>([]);
+  // Filters: use title keys
+  const [selectedTitleKeys, setSelectedTitleKeys] = useState<string[]>([]);
+  const [appliedTitleKeys, setAppliedTitleKeys] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchJobs();
+    const fetchRefs = async () => {
+      try {
+        type TitleRow = { title_key: string; label_en: string; label_my: string };
+        type LocRow = { location_key: string; label_en: string; label_my: string };
+        type EduRow = { education_key: string; label_en: string; label_my: string };
+
+        const [{ data: jt, error: e1 }, { data: lc, error: e2 }, { data: ed, error: e3 }] = await Promise.all([
+          supabase.from('job_titles_translation').select('title_key,label_en,label_my'),
+          supabase.from('locations_translation').select('location_key,label_en,label_my'),
+          supabase.from('education_translation').select('education_key,label_en,label_my'),
+        ]);
+        if (e1 || e2 || e3) throw (e1 || e2 || e3);
+        const jtRows = (jt ?? []) as TitleRow[];
+        const lcRows = (lc ?? []) as LocRow[];
+        const edRows = (ed ?? []) as EduRow[];
+
+        setTitles(jtRows.map(r => ({ key: r.title_key, en: r.label_en, my: r.label_my })));
+        setLocations(lcRows.map(r => ({ key: r.location_key, en: r.label_en, my: r.label_my })));
+        setEducations(edRows.map(r => ({ key: r.education_key, en: r.label_en, my: r.label_my })));
+        setRefsLoaded(true);
+      } catch (err) {
+        console.error('Error fetching reference data', err);
+        toast({ title: 'Error', description: 'Failed to load reference lists', variant: 'destructive' });
+      }
+    };
+    fetchRefs().then(() => {
+      // Only fetch jobs after references are ready so mapping to label_my works
+      fetchJobs();
+    });
   }, []);
+
+  const buildSalaryText = (row: JobRow) => {
+    const typeText = row.salary_type === 'monthly' ? '(Monthly)' : row.salary_type === 'daily' ? '(Daily)' : '(Hourly)';
+    const isMonthly = row.salary_type === 'monthly';
+    const toDisplay = (v: number | null | undefined) => {
+      if (v === null || v === undefined) return undefined;
+      return isMonthly ? (v / 100000) : v;
+    };
+    const unit = isMonthly ? 'Lakhs' : 'MMK';
+    const min = toDisplay(row.salary_min);
+    const max = toDisplay(row.salary_max);
+    switch (row.salary_structure) {
+      case 'negotiable':
+        return `Salary: Negotiable ${typeText}`;
+      case 'fixed':
+        return `${min} ${unit} ${typeText}`;
+      case 'range':
+        return `${min} - ${max} ${unit} ${typeText}`;
+      case 'min_only':
+        return `From ${min} ${unit} ${typeText}`;
+      case 'max_only':
+        return `Up to ${max} ${unit} ${typeText}`;
+      default:
+        return '';
+    }
+  };
+
+  const toCard = (row: JobRow): CardData => {
+    // Prefer embedded translations from DB; fall back to client-side maps; then legacy columns
+    const titleFromEmbed = row.job_titles_translation?.label_my || row.job_titles_translation?.label_en;
+    const titleFromMap = row.job_title_key ? (titleMap[row.job_title_key]?.my || titleMap[row.job_title_key]?.en) : undefined;
+    const title = row.job_title_key === 'custom'
+      ? (row.job_title_custom || row.job_title || '')
+      : (titleFromEmbed || titleFromMap || row.job_title || row.job_title_key || '');
+
+    const locFromEmbed = row.locations_translation?.label_my || row.locations_translation?.label_en;
+    const locFromMap = row.job_location_key ? (locMap[row.job_location_key]?.my || locMap[row.job_location_key]?.en) : undefined;
+    const loc = locFromEmbed || locFromMap || row.job_location_key || '';
+
+    const eduFromEmbed = row.education_translation?.label_my || row.education_translation?.label_en;
+    const eduFromMap = row.education_key ? (eduMap[row.education_key]?.my || eduMap[row.education_key]?.en) : undefined;
+    const edu = row.education_key === 'custom'
+      ? (row.education_custom || '')
+      : (eduFromEmbed || eduFromMap || row.education_key || '');
+    return {
+      id: row.id,
+      businessName: row.business_name || '',
+      jobTitleMy: title,
+      salaryDisplay: buildSalaryText(row),
+      jobLocationMy: loc,
+      jobType: row.job_type || '',
+      educationMy: edu,
+      ageMin: row.age_min,
+      ageMax: row.age_max,
+      benefits: row.benefits,
+      applicationDeadline: row.application_deadline || new Date().toISOString(),
+      descriptionMy: row.description_my || '',
+      contactNumber: row.phone_number,
+    };
+  };
 
   const fetchJobs = async () => {
     try {
       const { data, error } = await supabase
         .from("job_postings")
-        .select("*")
+        .select("id,business_name,job_title_key,job_title_custom,job_title,job_titles_translation(label_en,label_my),job_location_key,locations_translation(label_en,label_my),education_key,education_custom,education_translation(label_en,label_my),salary_structure,salary_type,salary_min,salary_max,job_type,age_min,age_max,benefits,application_deadline,description_my,phone_number")
         .order("created_at", { ascending: false })
         .limit(PAGE_SIZE);
 
       if (error) throw error;
-      const rows = data || [];
-      setJobs(rows);
+      const rows = (data || []) as unknown as JobRow[];
+      setJobs(rows.map(toCard));
       setHasMore(rows.length === PAGE_SIZE);
     } catch (error) {
       console.error("Error fetching jobs:", error);
@@ -115,91 +213,23 @@ const FindJobs = () => {
   };
 
   // Build and run a filtered page query
-  const fetchFirstPageWithFilters = async (options: FilterOption[]) => {
+  const fetchFirstPageWithFilters = async (titleKeys: string[]) => {
     try {
       setLoading(true);
       let query = supabase
         .from("job_postings")
-        .select("*")
+        .select("id,business_name,job_title_key,job_title_custom,job_title,job_titles_translation(label_en,label_my),job_location_key,locations_translation(label_en,label_my),education_key,education_custom,education_translation(label_en,label_my),salary_structure,salary_type,salary_min,salary_max,job_type,age_min,age_max,benefits,application_deadline,description_my,phone_number")
         .order("created_at", { ascending: false })
         .range(0, PAGE_SIZE - 1);
 
-      // Normalize: if includes All Jobs or empty -> no filter
-      const normalized = options.includes("All Jobs") || options.length === 0 ? [] : options;
-
-      if (normalized.length > 0) {
-        // Education options mapping
-        const eduConds: string[] = [];
-        if (normalized.includes("All Jobs (No minimum education requirement)")) {
-          eduConds.push(
-            "education_requirement.ilike.%no minimum%",
-            "education_requirement.ilike.%no education%",
-            "education_requirement.eq.",
-            "education_requirement.ilike.%none%"
-          );
-        }
-        if (normalized.includes("All Jobs (Secondary school education)")) {
-          eduConds.push("education_requirement.ilike.%secondary%");
-        }
-        if (normalized.includes("All Jobs (High School education)")) {
-          eduConds.push("education_requirement.ilike.%high school%");
-        }
-        if (normalized.includes("All Jobs with High School Graduates Preferred")) {
-          eduConds.push(
-            "education_requirement.ilike.%high school%",
-            "education_requirement.ilike.%graduate%",
-            "education_requirement.ilike.%preferred%"
-          );
-        }
-
-        // Role options mapping
-        const roleKeywords: Record<string, string[]> = {
-          "Driver": ["driver"],
-          "Rider": ["rider"],
-          "Delivery Person": ["delivery", "courier"],
-          "Security Officer": ["security"],
-          "Barista": ["barista"],
-          "Cashier": ["cashier"],
-          "Kitchen Assistant": ["kitchen assistant", "kitchen helper"],
-          "Cleaner": ["cleaner", "cleaning"],
-          "Nanny": ["nanny", "babysit"],
-          "F&B Service Crew": ["service crew", "f&b", "food and beverage"],
-          "Waiter": ["waiter", "server"],
-          "Waitress": ["waitress", "server"],
-          "Trainee Chef": ["trainee chef", "commis", "apprentice chef"],
-          "Catering Assistant": ["catering"],
-          "Construction Worker": ["construction", "worker", "labor", "labour"],
-        };
-
-        const roleConds: string[] = [];
-        normalized.forEach((opt) => {
-          if (opt in roleKeywords) {
-            roleKeywords[opt].forEach((kw) => {
-              roleConds.push(`job_title.ilike.%${kw}%`);
-            });
-          }
-        });
-
-        // Others-only: job titles that do NOT match any known role keywords
-        const othersOnly = normalized.length === 1 && normalized.includes("Others");
-        if (othersOnly) {
-          const allRoleKeywords = Object.values(roleKeywords).flat();
-          allRoleKeywords.forEach((kw) => {
-            query = query.not("job_title", "ilike", `%${kw}%`);
-          });
-        } else {
-          // Build OR filter across education and roles
-          const orParts = [...eduConds, ...roleConds];
-          if (orParts.length > 0) {
-            query = query.or(orParts.join(","));
-          }
-        }
+      if (titleKeys.length > 0) {
+        query = query.in('job_title_key', titleKeys);
       }
 
       const { data, error } = await query;
       if (error) throw error;
-      const rows = data || [];
-      setJobs(rows);
+      const rows = (data || []) as unknown as JobRow[];
+      setJobs(rows.map(toCard));
       setHasMore(rows.length === PAGE_SIZE);
     } catch (error) {
       console.error("Error fetching filtered jobs:", error);
@@ -220,79 +250,17 @@ const FindJobs = () => {
       const to = from + PAGE_SIZE - 1;
       let query = supabase
         .from("job_postings")
-        .select("*")
+        .select("id,business_name,job_title_key,job_title_custom,job_title,job_titles_translation(label_en,label_my),job_location_key,locations_translation(label_en,label_my),education_key,education_custom,education_translation(label_en,label_my),salary_structure,salary_type,salary_min,salary_max,job_type,age_min,age_max,benefits,application_deadline,description_my,phone_number")
         .order("created_at", { ascending: false })
         .range(from, to);
-
-      // Apply the same filters as current appliedOptions
-      const normalized = appliedOptions.includes("All Jobs") || appliedOptions.length === 0 ? [] : appliedOptions;
-      if (normalized.length > 0) {
-        const eduConds: string[] = [];
-        if (normalized.includes("All Jobs (No minimum education requirement)")) {
-          eduConds.push(
-            "education_requirement.ilike.%no minimum%",
-            "education_requirement.ilike.%no education%",
-            "education_requirement.eq.",
-            "education_requirement.ilike.%none%"
-          );
-        }
-        if (normalized.includes("All Jobs (Secondary school education)")) {
-          eduConds.push("education_requirement.ilike.%secondary%");
-        }
-        if (normalized.includes("All Jobs (High School education)")) {
-          eduConds.push("education_requirement.ilike.%high school%");
-        }
-        if (normalized.includes("All Jobs with High School Graduates Preferred")) {
-          eduConds.push(
-            "education_requirement.ilike.%high school%",
-            "education_requirement.ilike.%graduate%",
-            "education_requirement.ilike.%preferred%"
-          );
-        }
-
-        const roleKeywords: Record<string, string[]> = {
-          "Driver": ["driver"],
-          "Rider": ["rider"],
-          "Delivery Person": ["delivery", "courier"],
-          "Security Officer": ["security"],
-          "Barista": ["barista"],
-          "Cashier": ["cashier"],
-          "Kitchen Assistant": ["kitchen assistant", "kitchen helper"],
-          "Cleaner": ["cleaner", "cleaning"],
-          "Nanny": ["nanny", "babysit"],
-          "F&B Service Crew": ["service crew", "f&b", "food and beverage"],
-          "Waiter": ["waiter", "server"],
-          "Waitress": ["waitress", "server"],
-          "Trainee Chef": ["trainee chef", "commis", "apprentice chef"],
-          "Catering Assistant": ["catering"],
-          "Construction Worker": ["construction", "worker", "labor", "labour"],
-        };
-        const roleConds: string[] = [];
-        normalized.forEach((opt) => {
-          if (opt in roleKeywords) {
-            roleKeywords[opt].forEach((kw) => {
-              roleConds.push(`job_title.ilike.%${kw}%`);
-            });
-          }
-        });
-        const othersOnly = normalized.length === 1 && normalized.includes("Others");
-        if (othersOnly) {
-          const allRoleKeywords = Object.values(roleKeywords).flat();
-          allRoleKeywords.forEach((kw) => {
-            query = query.not("job_title", "ilike", `%${kw}%`);
-          });
-        } else {
-          const orParts = [...eduConds, ...roleConds];
-          if (orParts.length > 0) {
-            query = query.or(orParts.join(","));
-          }
-        }
+      if (appliedTitleKeys.length > 0) {
+        query = query.in('job_title_key', appliedTitleKeys);
       }
 
       const { data, error } = await query;
       if (error) throw error;
-      const rows = data || [];
-      setJobs((prev) => [...prev, ...rows]);
+      const rows = (data || []) as unknown as JobRow[];
+      setJobs((prev) => [...prev, ...rows.map(toCard)]);
       setHasMore(rows.length === PAGE_SIZE);
     } catch (error) {
       console.error("Error loading more jobs:", error);
@@ -306,83 +274,17 @@ const FindJobs = () => {
     }
   };
 
-  // Helper: determine if a job matches a single option
-  const jobMatchesOption = (job: JobPosting, option: FilterOption) => {
-    const title = (job.job_title || "").toLowerCase();
-    const edu = (job.education_requirement || "").toLowerCase();
-
-    // Education-based options
-    if (option === "All Jobs (No minimum education requirement)") {
-      return (
-        edu.includes("no minimum") ||
-        edu.includes("no education") ||
-        edu.trim() === "" ||
-        edu === "none"
-      );
-    }
-    if (option === "All Jobs (Secondary school education)") {
-      return edu.includes("secondary");
-    }
-    if (option === "All Jobs (High School education)") {
-      return edu.includes("high school");
-    }
-    if (option === "All Jobs with High School Graduates Preferred") {
-      return edu.includes("high school") || edu.includes("graduate") || edu.includes("preferred");
-    }
-
-    // Role-based options (keywords on title)
-    const roleKeywords: Record<string, string[]> = {
-      "Driver": ["driver"],
-      "Rider": ["rider"],
-      "Delivery Person": ["delivery", "courier"],
-      "Security Officer": ["security"],
-      "Barista": ["barista"],
-      "Cashier": ["cashier"],
-      "Kitchen Assistant": ["kitchen assistant", "kitchen helper"],
-      "Cleaner": ["cleaner", "cleaning"],
-      "Nanny": ["nanny", "babysit"],
-      "F&B Service Crew": ["service crew", "f&b", "food and beverage"],
-      "Waiter": ["waiter", "server"],
-      "Waitress": ["waitress", "server"],
-      "Trainee Chef": ["trainee chef", "commis", "apprentice chef"],
-      "Catering Assistant": ["catering"],
-      "Construction Worker": ["construction", "worker", "labor", "labour"],
-    };
-
-    if (option in roleKeywords) {
-      return roleKeywords[option]?.some((k) => title.includes(k));
-    }
-
-    if (option === "Others") {
-      // Consider "Others" as titles that do not match any known role keyword
-      const allRoleKeys = Object.values(roleKeywords).flat();
-      const matchesAny = allRoleKeys.some((k) => title.includes(k));
-      return !matchesAny; 
-    }
-
-    // "All Jobs" or unknown -> match all
-    return true;
-  };
-
   const applyFilters = () => {
-    // Normalize and apply, then fetch first page with these filters
-    const normalized = selectedOptions;
-    const hasAll = normalized.includes("All Jobs");
-    const next: FilterOption[] = hasAll ? ["All Jobs" as FilterOption] : normalized;
-    setAppliedOptions(next);
+    const next = selectedTitleKeys;
+    setAppliedTitleKeys(next);
     fetchFirstPageWithFilters(next);
   };
-
-  const isOptionSelected = (opt: FilterOption) => selectedOptions.includes(opt);
-  const toggleOption = (opt: FilterOption) => {
-    setSelectedOptions((prev) => {
-      // Selecting All Jobs clears others; selecting any other deselects All Jobs
-      if (opt === "All Jobs") return prev.includes(opt) ? [] : ["All Jobs"]; 
-      const withoutAll = prev.filter((p) => p !== "All Jobs");
-      return withoutAll.includes(opt)
-        ? withoutAll.filter((p) => p !== opt)
-        : [...withoutAll, opt];
-    });
+  
+  const isTitleSelected = (key: string) => selectedTitleKeys.includes(key);
+  const toggleTitle = (key: string) => {
+    setSelectedTitleKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
   };
 
   return (
@@ -428,7 +330,7 @@ const FindJobs = () => {
                         ref={triggerRef}
                       >
                         <span>
-                          Select job types{selectedOptions.length > 0 ? ` (${selectedOptions.length})` : ""}
+                          Select job types{selectedTitleKeys.length > 0 ? ` (${selectedTitleKeys.length})` : ""}
                         </span>
                         <ChevronDown className="h-4 w-4 opacity-60" />
                       </Button>
@@ -439,13 +341,20 @@ const FindJobs = () => {
                     >
                       <DropdownMenuLabel>Job filters</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      {FILTER_OPTIONS.map((opt) => (
+                      <DropdownMenuCheckboxItem
+                        key="all"
+                        checked={selectedTitleKeys.length === 0}
+                        onCheckedChange={() => setSelectedTitleKeys([])}
+                      >
+                        All Jobs
+                      </DropdownMenuCheckboxItem>
+                      {titles.map((t) => (
                         <DropdownMenuCheckboxItem
-                          key={opt}
-                          checked={isOptionSelected(opt)}
-                          onCheckedChange={() => toggleOption(opt)}
+                          key={t.key}
+                          checked={isTitleSelected(t.key)}
+                          onCheckedChange={() => toggleTitle(t.key)}
                         >
-                          {opt}
+                          {t.en} / {t.my}
                         </DropdownMenuCheckboxItem>
                       ))}
                     </DropdownMenuContent>
@@ -465,9 +374,8 @@ const FindJobs = () => {
                     variant="outline"
                     className="w-full md:w-auto rounded-none md:-ml-px"
                     onClick={() => {
-                      setSelectedOptions([]);
-                      setAppliedOptions(["All Jobs" as FilterOption]);
-                      // Reset to first page without filters
+                      setSelectedTitleKeys([]);
+                      setAppliedTitleKeys([]);
                       fetchJobs();
                     }}
                   >
@@ -477,9 +385,9 @@ const FindJobs = () => {
               </div>
               {/* Applied hint */}
               <div className="mt-3 text-xs text-muted-foreground">
-                {appliedOptions.length === 0 || appliedOptions.includes("All Jobs")
+                {appliedTitleKeys.length === 0
                   ? "Showing all jobs"
-                  : `Applied filters: ${appliedOptions.join(", ")}`}
+                  : `Applied filters: ${appliedTitleKeys.map(k => `${titleMap[k]?.en || k}`).join(", ")}`}
               </div>
             </div>
 
@@ -498,19 +406,18 @@ const FindJobs = () => {
                     <JobCard
                       key={job.id}
                       id={job.id}
-                      businessName={job.business_name}
-                      jobTitle={job.job_title}
-                      salaryAmount={job.salary_amount}
-                      salaryType={job.salary_type}
-                      jobLocation={job.job_location}
-                      jobType={job.job_type}
-                      educationRequirement={job.education_requirement}
-                      ageMin={job.age_min}
-                      ageMax={job.age_max}
+                      businessName={job.businessName}
+                      jobTitleMy={job.jobTitleMy}
+                      salaryDisplay={job.salaryDisplay}
+                      jobLocationMy={job.jobLocationMy}
+                      jobType={job.jobType}
+                      educationMy={job.educationMy}
+                      ageMin={job.ageMin}
+                      ageMax={job.ageMax}
                       benefits={job.benefits}
-                      applicationDeadline={job.application_deadline}
-                      description={job.description}
-                      contactNumber={job.contact_number}
+                      applicationDeadline={job.applicationDeadline}
+                      descriptionMy={job.descriptionMy}
+                      contactNumber={job.contactNumber}
                     />
                   ))}
                 </div>

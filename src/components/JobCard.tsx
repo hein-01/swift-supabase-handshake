@@ -15,34 +15,32 @@ import {
 interface JobCardProps {
   id: string;
   businessName: string;
-  jobTitle: string;
-  salaryAmount: string;
-  salaryType: string;
-  jobLocation: string;
+  jobTitleMy: string;
+  salaryDisplay: string;
+  jobLocationMy: string;
   jobType: string;
-  educationRequirement: string;
+  educationMy: string;
   ageMin: number | null;
   ageMax: number | null;
   benefits: string[] | null;
   applicationDeadline: string;
-  description: string;
-  contactNumber: string;
+  descriptionMy: string;
+  contactNumber?: string | null;
 }
 
 export const JobCard = ({
   id,
   businessName,
-  jobTitle,
-  salaryAmount,
-  salaryType,
-  jobLocation,
+  jobTitleMy,
+  salaryDisplay,
+  jobLocationMy,
   jobType,
-  educationRequirement,
+  educationMy,
   ageMin,
   ageMax,
   benefits,
   applicationDeadline,
-  description,
+  descriptionMy,
   contactNumber,
 }: JobCardProps) => {
   const [showDescription, setShowDescription] = useState(false);
@@ -52,7 +50,8 @@ export const JobCard = ({
   const { toast } = useToast();
 
   const handleApply = () => {
-    const viberLink = `viber://chat?url=viber://call&uri=viber://call/chat?number=+95${contactNumber.replace(/\+/g, '')}`;
+    const safeNumber = (contactNumber || '').replace(/\+/g, '');
+    const viberLink = `viber://chat?url=viber://call&uri=viber://call/chat?number=+95${safeNumber}`;
     window.open(viberLink, '_blank');
   };
 
@@ -81,10 +80,23 @@ export const JobCard = ({
       });
       setReportReason("");
       setShowReport(false);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error submitting report", err);
-      const anyErr = err as any;
-      const desc = anyErr?.message || anyErr?.error_description || anyErr?.hint || anyErr?.details || "We couldn't submit your report. Please try again.";
+      const getErrMsg = (e: unknown): string => {
+        if (typeof e === 'string') return e;
+        if (e && typeof e === 'object') {
+          const o = e as Record<string, unknown>;
+          return (
+            (typeof o.message === 'string' && o.message) ||
+            (typeof o.error_description === 'string' && o.error_description) ||
+            (typeof o.hint === 'string' && o.hint) ||
+            (typeof o.details === 'string' && o.details) ||
+            "We couldn't submit your report. Please try again."
+          );
+        }
+        return "We couldn't submit your report. Please try again.";
+      };
+      const desc = getErrMsg(err);
       toast({
         title: "Submission failed",
         description: desc,
@@ -113,23 +125,21 @@ export const JobCard = ({
           <div className="mb-3">
             <div className="flex-1">
               <p className="text-xs text-muted-foreground uppercase mb-1">{businessName}</p>
-              <h3 className="text-2xl font-bold text-foreground mb-2">{jobTitle}</h3>
-              <p className="text-base font-semibold text-[hsl(var(--primary))]">
-                MMK {salaryAmount} <span className="text-muted-foreground">({salaryType})</span>
-              </p>
+              <h3 className="text-2xl font-bold text-foreground mb-2">{jobTitleMy}</h3>
+              <p className="text-base font-semibold text-[hsl(var(--primary))]">{salaryDisplay}</p>
             </div>
           </div>
 
           {/* Info Tags */}
           <div className="flex flex-wrap gap-2 mb-3">
             <Badge variant="secondary" className="bg-muted text-muted-foreground rounded-none">
-              {jobLocation}
+              {jobLocationMy}
             </Badge>
             <Badge variant="secondary" className="bg-muted text-muted-foreground rounded-none">
               {jobType}
             </Badge>
             <Badge variant="secondary" className="bg-muted text-muted-foreground rounded-none">
-              {educationRequirement}
+              {educationMy}
             </Badge>
           </div>
 
@@ -180,13 +190,13 @@ export const JobCard = ({
       <Dialog open={showDescription} onOpenChange={setShowDescription}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{jobTitle}</DialogTitle>
+            <DialogTitle>{jobTitleMy}</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
               {businessName}
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 whitespace-pre-wrap text-foreground">
-            {description}
+            {descriptionMy}
           </div>
         </DialogContent>
       </Dialog>

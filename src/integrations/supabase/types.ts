@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      job_titles_translation: {
+        Row: {
+          title_key: string
+          label_en: string
+          label_my: string
+        }
+        Insert: {
+          title_key: string
+          label_en: string
+          label_my: string
+        }
+        Update: {
+          title_key?: string
+          label_en?: string
+          label_my?: string
+        }
+        Relationships: []
+      }
+      locations_translation: {
+        Row: {
+          location_key: string
+          label_en: string
+          label_my: string
+        }
+        Insert: {
+          location_key: string
+          label_en: string
+          label_my: string
+        }
+        Update: {
+          location_key?: string
+          label_en?: string
+          label_my?: string
+        }
+        Relationships: []
+      }
+      education_translation: {
+        Row: {
+          education_key: string
+          label_en: string
+          label_my: string
+        }
+        Insert: {
+          education_key: string
+          label_en: string
+          label_my: string
+        }
+        Update: {
+          education_key?: string
+          label_en?: string
+          label_my?: string
+        }
+        Relationships: []
+      }
       admin_users: {
         Row: {
           admin_role: string | null
@@ -358,61 +412,73 @@ export type Database = {
       }
       job_postings: {
         Row: {
-          age_max: number | null
-          age_min: number | null
-          application_deadline: string
-          benefits: string[] | null
-          business_name: string
-          contact_number: string
-          created_at: string
-          description: string
-          education_requirement: string
           id: string
-          job_location: string
-          job_title: string
-          job_type: string
-          salary_amount: string
+          created_at: string
+          job_title_key: string | null
+          job_location_key: string | null
+          education_key: string | null
+          job_title_custom: string | null
+          education_custom: string | null
+          salary_structure: string
           salary_type: string
-          updated_at: string
-          user_id: string
+          salary_min: number | null
+          salary_max: number | null
+          description_my: string | null
+          description_en: string | null
+          business_name: string | null
+          job_type: string | null
+          age_min: number | null
+          age_max: number | null
+          benefits: string[] | null
+          application_deadline: string | null
+          whatsapp_number: string | null
+          phone_number: string | null
         }
         Insert: {
-          age_max?: number | null
-          age_min?: number | null
-          application_deadline: string
-          benefits?: string[] | null
-          business_name: string
-          contact_number: string
-          created_at?: string
-          description: string
-          education_requirement: string
           id?: string
-          job_location: string
-          job_title: string
-          job_type: string
-          salary_amount: string
+          created_at?: string
+          job_title_key?: string | null
+          job_location_key?: string | null
+          education_key?: string | null
+          job_title_custom?: string | null
+          education_custom?: string | null
+          salary_structure: string
           salary_type: string
-          updated_at?: string
-          user_id: string
+          salary_min?: number | null
+          salary_max?: number | null
+          description_my?: string | null
+          description_en?: string | null
+          business_name?: string | null
+          job_type?: string | null
+          age_min?: number | null
+          age_max?: number | null
+          benefits?: string[] | null
+          application_deadline?: string | null
+          whatsapp_number?: string | null
+          phone_number?: string | null
         }
         Update: {
-          age_max?: number | null
-          age_min?: number | null
-          application_deadline?: string
-          benefits?: string[] | null
-          business_name?: string
-          contact_number?: string
-          created_at?: string
-          description?: string
-          education_requirement?: string
           id?: string
-          job_location?: string
-          job_title?: string
-          job_type?: string
-          salary_amount?: string
+          created_at?: string
+          job_title_key?: string | null
+          job_location_key?: string | null
+          education_key?: string | null
+          job_title_custom?: string | null
+          education_custom?: string | null
+          salary_structure?: string
           salary_type?: string
-          updated_at?: string
-          user_id?: string
+          salary_min?: number | null
+          salary_max?: number | null
+          description_my?: string | null
+          description_en?: string | null
+          business_name?: string | null
+          job_type?: string | null
+          age_min?: number | null
+          age_max?: number | null
+          benefits?: string[] | null
+          application_deadline?: string | null
+          whatsapp_number?: string | null
+          phone_number?: string | null
         }
         Relationships: []
       }
