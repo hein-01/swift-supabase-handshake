@@ -416,6 +416,38 @@ export type Database = {
         }
         Relationships: []
       }
+      job_reports: {
+        Row: {
+          created_at: string
+          id: string
+          job_post_id: string
+          reason: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_post_id: string
+          reason: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_post_id?: string
+          reason?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_reports_job_post_id_fkey"
+            columns: ["job_post_id"]
+            isOneToOne: false
+            referencedRelation: "job_postings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           created_at: string
